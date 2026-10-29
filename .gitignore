@@ -1,0 +1,11 @@
+node_modules
+dist
+.vite
+*.log
+
+# Runtime chat log between the game and the steward session (personal, regenerated)
+public/chat.jsonl
+# Scratch screenshots
+.shots/
+# Machine-specific fraigent hooks (absolute paths into the local fraigent install)
+.claude/

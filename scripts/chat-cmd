@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Send a game command into the running Realms game (executed by runCommand in src/ui/Chat.tsx).
+# Usage: scripts/chat-cmd summonTrader
+set -euo pipefail
+[ $# -eq 1 ] || { echo "usage: $0 <command>" >&2; exit 1; }
+dir="$(cd "$(dirname "$0")/.." && pwd)"
+now_ms=$(( $(date +%s%N) / 1000000 ))
+jq -cn --arg cmd "$1" --argjson at "$now_ms" '{id: ("k" + ($at|tostring)), at: $at, cmd: $cmd}' >> "$dir/public/chat.jsonl"
+echo "sent"

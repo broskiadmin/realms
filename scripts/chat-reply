@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Send a chat message into the running Realms game.
+# Usage: scripts/chat-reply "Hello from Claude"
+# Appends one JSON line to public/chat.jsonl, which the game polls every 2s.
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: $0 \"message\"" >&2; exit 1; }
+dir="$(cd "$(dirname "$0")/.." && pwd)"
+now_ms=$(( $(date +%s%N) / 1000000 ))
+jq -cn --arg text "$*" --argjson at "$now_ms" '{id: ("c" + ($at|tostring)), at: $at, text: $text}' >> "$dir/public/chat.jsonl"
+echo "sent"
