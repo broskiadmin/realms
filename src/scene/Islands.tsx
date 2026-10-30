@@ -139,7 +139,8 @@ function tuftGeometry(): THREE.BufferGeometry {
     const ox = Math.cos(a + Math.PI / 2) * 0.08 * (i - 2);
     const oz = Math.sin(a + Math.PI / 2) * 0.08 * (i - 2);
     pos.push(ox - dx, 0, oz - dz, ox + dx, 0, oz + dz, ox + Math.cos(a + 1.57) * lean, h, oz + Math.sin(a + 1.57) * lean);
-    col.push(0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 1.25, 1.25, 1.15);
+    const root = REALISTIC ? 0.75 : 0.55;
+    col.push(root, root, root, root, root, root, 1.25, 1.25, 1.15);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -150,8 +151,9 @@ function tuftGeometry(): THREE.BufferGeometry {
 
 export const windUniform = { value: 0 };
 
-function windMaterial(opts: THREE.MeshLambertMaterialParameters, strength: number): THREE.MeshLambertMaterial {
-  const m = new THREE.MeshLambertMaterial(opts);
+function windMaterial(opts: THREE.MeshLambertMaterialParameters, strength: number): THREE.Material {
+  // Realistic mode uses PBR so grass picks up the sky's image-based light (Lambert ignores it and goes murky).
+  const m = REALISTIC ? new THREE.MeshStandardMaterial({ ...opts, roughness: 0.9, metalness: 0 }) : new THREE.MeshLambertMaterial(opts);
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = windUniform;
     shader.vertexShader = shader.vertexShader

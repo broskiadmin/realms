@@ -112,7 +112,7 @@ export function Lights() {
       // Strong key light + dim sky fill; image-based lighting from RealisticSky does the rest.
       l.intensity = day > 0.02 ? 4.2 * day : 0.35;
       l.color.set(day > 0.02 ? '#fff1de' : '#8ea6e0').lerp(REAL_HAZE.sunset, glow);
-      hl.intensity = 0.12 + 0.35 * day;
+      hl.intensity = 0.12 + 0.65 * day;
     } else {
       l.intensity = day > 0.02 ? 2.4 * day : 0.55;
       l.color.set(day > 0.02 ? '#fff3dc' : '#9fb4ff').lerp(SUNSET, glow * 0.6);
