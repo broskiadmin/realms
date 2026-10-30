@@ -215,6 +215,13 @@ kbd { font-family: inherit; min-width: 54px; text-align: center; padding: 2px 8p
 .nametag { padding: 2px 8px; border-radius: 6px; background: rgba(10, 12, 40, 0.6); color: #fff; font-family: 'Lilita One', system-ui, sans-serif; font-size: 14px; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
 .chat__line--player b { color: #b8ffc6; }
 
+/* Crash screen */
+.crash { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(20, 8, 30, 0.85); font-family: 'Lilita One', system-ui, sans-serif; color: #fff; }
+.crash__card { width: min(560px, 92vw); padding: 24px; border-radius: 22px; background: linear-gradient(160deg, #6b2b5e, #3b1d63); text-align: center; box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4); }
+.crash__card h2 { margin: 0 0 10px; font-size: 38px; font-weight: 400; color: #ff8a8a; }
+.crash__msg { font-family: ui-monospace, monospace; font-size: 13px; text-align: left; background: rgba(0, 0, 0, 0.35); padding: 10px; border-radius: 10px; word-break: break-word; max-height: 30vh; overflow: auto; }
+.crash__note { font-size: 14px; opacity: 0.85; }
+
 /* Small screens (phones, either orientation) */
 @media (max-width: 820px), (max-height: 500px) {
   .clock { top: 10px; left: 10px; padding: 6px 10px 6px 8px; }

@@ -1,3 +1,5 @@
+// CrashGuard first: its global error handlers must be live before anything else loads.
+import { CrashBoundary, CrashOverlay } from './ui/CrashGuard';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -11,6 +13,9 @@ if (import.meta.env.DEV) Object.assign(window, { __realms: { useGame, player, cl
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <CrashBoundary>
+      <App />
+    </CrashBoundary>
+    <CrashOverlay />
   </React.StrictMode>,
 );
