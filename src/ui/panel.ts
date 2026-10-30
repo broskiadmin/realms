@@ -8,6 +8,12 @@ export function releaseMouse() {
 
 /** Jump back into play after closing a panel. Must run inside a click handler on desktop. */
 export function resumeGame() {
-  if (IS_TOUCH) useGame.getState().setLocked(true);
-  else document.querySelector('canvas')?.requestPointerLock();
+  if (IS_TOUCH) {
+    useGame.getState().setLocked(true);
+    return;
+  }
+  // Chrome refuses re-locking for ~1s after the user exits the lock and returns a rejected
+  // promise; that's harmless — the pause menu shows and the player clicks Resume.
+  const req = document.querySelector('canvas')?.requestPointerLock() as unknown;
+  if (req instanceof Promise) req.catch(() => {});
 }

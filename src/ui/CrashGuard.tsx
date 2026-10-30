@@ -37,8 +37,20 @@ function describe(e: unknown): string {
   return String(e);
 }
 
-window.addEventListener('error', (e) => reportCrash('Error', describe(e.error ?? e.message)));
-window.addEventListener('unhandledrejection', (e) => reportCrash('Unhandled rejection', describe(e.reason)));
+/** Browser refusals that are expected during normal play and must not show the crash screen. */
+function benign(detail: string): boolean {
+  return /pointer ?lock/i.test(detail);
+}
+
+window.addEventListener('error', (e) => {
+  const d = describe(e.error ?? e.message);
+  if (!benign(d)) reportCrash('Error', d);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const d = describe(e.reason);
+  if (benign(d)) e.preventDefault();
+  else reportCrash('Unhandled rejection', d);
+});
 window.addEventListener(
   'webglcontextlost',
   () => reportCrash('WebGL context lost', 'the GPU reset or ran out of memory (graphics preset too heavy?)'),
