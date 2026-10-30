@@ -6,6 +6,8 @@ import { MOBS, updateMobs, type Mob } from '../game/mobs';
 import type { MobType } from '../game/world';
 import { cowHide, featherCoat, furNormal, pigSkin } from './animalTextures';
 import { surface, type Surface } from './materials';
+import { REALISTIC } from './quality';
+import { RealChicken, RealCow, RealPig, realMats, type RealMats } from './RealisticAnimals';
 
 // ---------------------------------------------------------------------------
 // Geometry helpers (shared by every instance of a species)
@@ -239,7 +241,7 @@ function Chicken({ rig, m, ud }: PartProps) {
 function MobView({ mob }: { mob: Mob }) {
   const group = useRef<THREE.Group>(null);
   const rig = useRef<Rig>({ body: null, head: null, headBase: 0, tail: null, legs: [], wings: [] });
-  const mats = useMemo(() => makeMats(mob.type), [mob.type]);
+  const mats = useMemo<Mats>(() => (REALISTIC ? realMats(mob.type, mob.id * 13.7) : makeMats(mob.type)), [mob.type, mob.id]);
   const matList = useMemo(() => Object.values(mats), [mats]);
   const gait = useRef(0);
   const ud = useMemo(() => ({ kind: 'mob', id: mob.id }), [mob.id]);
@@ -288,6 +290,14 @@ function MobView({ mob }: { mob: Mob }) {
   });
 
   const props = { rig: rig.current, m: mats, ud };
+  if (REALISTIC) {
+    const rp = { rig: rig.current, m: mats as RealMats, ud };
+    return (
+      <group ref={group}>
+        {mob.type === 'cow' ? <RealCow {...rp} /> : mob.type === 'pig' ? <RealPig {...rp} /> : <RealChicken {...rp} />}
+      </group>
+    );
+  }
   return (
     <group ref={group}>
       {mob.type === 'cow' ? <Cow {...props} /> : mob.type === 'pig' ? <Pig {...props} /> : <Chicken {...props} />}

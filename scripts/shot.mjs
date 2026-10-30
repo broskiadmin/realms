@@ -1,5 +1,6 @@
 // Headless screenshot of the running game, for checking visuals without a human.
-// Usage: node scripts/shot.mjs <out.png> [quality=realistic] [worldTime=60] [x,y,z,yaw] [waitMs=12000]
+// Usage: node scripts/shot.mjs <out.png> [quality=realistic] [worldTime=60] [x,y,z,yaw] [waitMs=12000] [lineup]
+// "lineup" parks one cow, pig and chicken (side-on) a few metres in front of the camera.
 // Uses the Chromium in .browsers/ (install: PLAYWRIGHT_BROWSERS_PATH=.browsers npx playwright-core install chromium).
 import { fileURLToPath } from 'node:url';
 
@@ -7,7 +8,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 process.env.PLAYWRIGHT_BROWSERS_PATH = `${root}.browsers`;
 const { chromium } = await import('playwright-core');
 
-const [out = `${root}.shots/shot.png`, quality = 'realistic', worldTime = '60', pose = '', wait = '12000'] = process.argv.slice(2);
+const [out = `${root}.shots/shot.png`, quality = 'realistic', worldTime = '60', pose = '', wait = '12000', extra = ''] = process.argv.slice(2);
 const [x, y, z, yaw] = pose ? pose.split(',').map(Number) : [0, 1.2, 4, 0];
 
 const browser = await chromium.launch({
@@ -36,6 +37,26 @@ await page.evaluate(
 await page.reload();
 await page.waitForTimeout(Number(wait));
 await page.evaluate(() => document.querySelector('.menu')?.classList.add('menu--hidden'));
+if (extra === 'lineup') {
+  await page.evaluate(() => {
+    const r = window.__realms;
+    const p = r.player.pos;
+    const yaw = r.player.yaw;
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    // Side-on, spaced across the view, ~4.5 m ahead.
+    [['cow', -2.2], ['pig', 0.6], ['chicken', 2.4]].forEach(([type, side]) => {
+      const m = r.MOBS.find((mm) => mm.type === type && !mm.dead);
+      if (!m) return;
+      m.island = 0;
+      m.x = p.x + fx * 4.5 - fz * side;
+      m.z = p.z + fz * 4.5 + fx * side;
+      m.heading = yaw + Math.PI / 2;
+      m.state = 'idle';
+      m.timer = 999;
+    });
+  });
+}
 await page.waitForTimeout(1500);
 await page.screenshot({ path: out });
 console.log(errors.slice(0, 15).join('\n') || 'no console errors');
