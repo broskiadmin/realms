@@ -36,20 +36,22 @@ function texture(c: HTMLCanvasElement, srgb: boolean, repeat = 1): THREE.CanvasT
 }
 
 /** Turn a greyscale height canvas into a tangent-space normal map (wraps at edges). */
-function normalMap(height: HTMLCanvasElement, strength: number): THREE.CanvasTexture {
-  const s = height.width;
-  const src = height.getContext('2d')!.getImageData(0, 0, s, s).data;
+export function normalMap(height: HTMLCanvasElement, strength: number): THREE.CanvasTexture {
+  const w = height.width;
+  const hh = height.height;
+  const src = height.getContext('2d')!.getImageData(0, 0, w, hh).data;
   const out = document.createElement('canvas');
-  out.width = out.height = s;
+  out.width = w;
+  out.height = hh;
   const og = out.getContext('2d')!;
-  const img = og.createImageData(s, s);
-  const h = (x: number, y: number) => src[(((y + s) % s) * s + ((x + s) % s)) * 4] / 255;
-  for (let y = 0; y < s; y++) {
-    for (let x = 0; x < s; x++) {
+  const img = og.createImageData(w, hh);
+  const h = (x: number, y: number) => src[(((y + hh) % hh) * w + ((x + w) % w)) * 4] / 255;
+  for (let y = 0; y < hh; y++) {
+    for (let x = 0; x < w; x++) {
       const dx = (h(x + 1, y) - h(x - 1, y)) * strength;
       const dy = (h(x, y + 1) - h(x, y - 1)) * strength;
       const len = Math.hypot(dx, dy, 1);
-      const i = (y * s + x) * 4;
+      const i = (y * w + x) * 4;
       img.data[i] = ((-dx / len) * 0.5 + 0.5) * 255;
       img.data[i + 1] = ((dy / len) * 0.5 + 0.5) * 255;
       img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
