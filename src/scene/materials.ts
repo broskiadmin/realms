@@ -80,6 +80,11 @@ export function toon(color: string, glow = 0, detail?: THREE.Texture): Surface {
   return m;
 }
 
+/** Visit every shared material made by toon() (used to hot-swap textures in Realistic mode). */
+export function eachCachedSurface(fn: (m: Surface) => void) {
+  for (const m of toonCache.values()) fn(m);
+}
+
 export const pieceMaterials = {
   wood: surface({ ...woodTex, normalScale: 1.1, roughness: 0.8 }),
   stone: surface({ ...stoneTex, normalScale: 1.1, roughness: 0.92 }),

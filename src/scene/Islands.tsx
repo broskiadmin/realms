@@ -4,6 +4,7 @@ import { fbm, mulberry32, noise2, smoothstep } from '../game/noise';
 import { BIOMES, ISLANDS, edgeT, islandHeight, radiusAt, randomSpot, topAt, type IslandDef } from '../game/world';
 import { surface } from './materials';
 import { natural, REALISTIC } from './quality';
+import { terrainPhoto } from './photoTextures';
 import { grassDetail, rockDetail } from './textures';
 
 // Realistic mode doubles mesh resolution for smoother silhouettes and lighting.
@@ -85,6 +86,8 @@ const islandMaterial = (() => {
   m.onBeforeCompile = (shader) => {
     shader.uniforms.tGrass = { value: grassDetail };
     shader.uniforms.tRock = { value: rockDetail };
+    // Realistic mode: photo-scanned maps arrive asynchronously and take over (uPhoto = 1).
+    Object.assign(shader.uniforms, terrainPhoto);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNorm;')
       .replace(
@@ -94,18 +97,33 @@ const islandMaterial = (() => {
         vWNorm = normalize(mat3(modelMatrix) * objectNormal);`,
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D tGrass;\nuniform sampler2D tRock;\nvarying vec3 vWPos;\nvarying vec3 vWNorm;')
+      .replace(
+        '#include <common>',
+        `#include <common>
+        uniform sampler2D tGrass; uniform sampler2D tRock;
+        uniform sampler2D tGrassPhoto; uniform sampler2D tRockPhoto; uniform float uPhoto;
+        varying vec3 vWPos; varying vec3 vWNorm;
+        vec3 triplanar(sampler2D t, vec3 p, vec3 w, float s) {
+          return texture2D(t, p.zy * s).rgb * w.x + texture2D(t, p.xz * s).rgb * w.y + texture2D(t, p.xy * s).rgb * w.z;
+        }`,
+      )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
         vec3 bw = pow(abs(vWNorm), vec3(4.0));
         bw /= (bw.x + bw.y + bw.z);
-        vec3 rock = texture2D(tRock, vWPos.zy * 0.18).rgb * bw.x
-                  + texture2D(tRock, vWPos.xz * 0.18).rgb * bw.y
-                  + texture2D(tRock, vWPos.xy * 0.18).rgb * bw.z;
-        vec3 grass = texture2D(tGrass, vWPos.xz * 0.3).rgb;
         float flatness = smoothstep(0.55, 0.8, vWNorm.y);
-        diffuseColor.rgb *= mix(rock, grass, flatness) * 1.18;`,
+        if (uPhoto > 0.5) {
+          // Two scales blended to break up visible tiling; vertex colour keeps a hint of each biome.
+          vec3 grass = mix(texture2D(tGrassPhoto, vWPos.xz * 0.12).rgb, texture2D(tGrassPhoto, vWPos.xz * 0.031 + 0.37).rgb, 0.35);
+          vec3 rock = mix(triplanar(tRockPhoto, vWPos, bw, 0.1), triplanar(tRockPhoto, vWPos, bw, 0.027), 0.35);
+          vec3 photo = mix(rock, grass, flatness);
+          diffuseColor.rgb = photo * mix(vec3(1.0), diffuseColor.rgb * 2.4, 0.3);
+        } else {
+          vec3 rock = triplanar(tRock, vWPos, bw, 0.18);
+          vec3 grass = texture2D(tGrass, vWPos.xz * 0.3).rgb;
+          diffuseColor.rgb *= mix(rock, grass, flatness) * 1.18;
+        }`,
       );
   };
   return m;
@@ -189,8 +207,8 @@ export function Grass() {
     const up = new THREE.Vector3(0, 1, 0);
     for (const isl of ISLANDS) {
       const pal = BIOMES[isl.biome];
-      // Realistic mode: ~3.5x denser, slightly taller grass.
-      const count = Math.floor(Math.PI * isl.radius * isl.radius * isl.grassDensity * (REALISTIC ? 3.5 : 1));
+      // Realistic mode: ~7x denser, slightly taller grass.
+      const count = Math.floor(Math.PI * isl.radius * isl.radius * isl.grassDensity * (REALISTIC ? 7 : 1));
       const ga = natural(new THREE.Color(pal.grass[0]));
       const gb = natural(new THREE.Color(pal.grass[1]));
       for (let i = 0; i < count; i++) {

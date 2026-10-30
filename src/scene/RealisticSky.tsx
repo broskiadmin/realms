@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Cloud, Clouds, Stars } from '@react-three/drei';
 import * as THREE from 'three';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Sky as SkyImpl } from 'three/examples/jsm/objects/Sky.js';
 import { mulberry32 } from '../game/noise';
 import { SUN_DIR } from './Environment';
@@ -37,12 +38,33 @@ export function RealisticSky() {
     return { envScene, pmrem: new THREE.PMREMGenerator(gl) };
   }, [gl, sky]);
   const target = useRef<THREE.WebGLRenderTarget | null>(null);
+  const hdri = useRef<THREE.WebGLRenderTarget | null>(null);
   const timer = useRef(ENV_REFRESH);
   const stars = useRef<THREE.Points>(null);
+
+  // A real captured sky (Poly Haven HDRI) gives far richer daylight than the analytic model;
+  // falls back to the analytic sky's environment if the file hasn't been fetched.
+  useEffect(() => {
+    let alive = true;
+    new RGBELoader()
+      .loadAsync(`${import.meta.env.BASE_URL}assets/ph/sky.hdr`)
+      .then((tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        const rt = env.pmrem.fromEquirectangular(tex);
+        tex.dispose();
+        if (alive) hdri.current = rt;
+        else rt.dispose();
+      })
+      .catch(() => console.warn('[realms] sky.hdr unavailable — run scripts/fetch-assets.sh'));
+    return () => {
+      alive = false;
+    };
+  }, [env]);
 
   useEffect(
     () => () => {
       target.current?.dispose();
+      hdri.current?.dispose();
       env.pmrem.dispose();
       scene.environment = null;
     },
@@ -53,6 +75,12 @@ export function RealisticSky() {
     sky.position.copy(state.camera.position);
     (sky.material.uniforms.sunPosition.value as THREE.Vector3).copy(SUN_DIR);
     if (stars.current) stars.current.visible = SUN_DIR.y < -0.02;
+    if (hdri.current) {
+      // Daylight from the captured sky, fading to almost nothing at night.
+      scene.environment = hdri.current.texture;
+      scene.environmentIntensity = THREE.MathUtils.clamp(SUN_DIR.y * 2.2 + 0.2, 0.04, 1);
+      return;
+    }
     timer.current += dt;
     if (timer.current >= ENV_REFRESH) {
       timer.current = 0;

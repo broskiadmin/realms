@@ -6,6 +6,8 @@ dist
 
 # Runtime chat log between the game and the steward session (personal, regenerated)
 public/chat.jsonl
+# Poly Haven photo textures/HDRI for Realistic mode (fetched by scripts/fetch-assets.sh)
+public/assets/ph/
 # Multiplayer world saves (runtime data)
 server-data/
 # Scratch screenshots

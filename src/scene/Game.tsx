@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls, SoftShadows } from '@react-three/drei';
-import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, GodRays, N8AO, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { Effect, ToneMappingMode } from 'postprocessing';
 import * as THREE from 'three';
 import { IS_TOUCH } from '../game/fx';
@@ -10,7 +10,8 @@ import { tickTrader } from '../game/npcs';
 import { Benches } from './Benches';
 import { Npcs, TraderCart } from './Npcs';
 import { Wisps } from './Wisps';
-import { Clouds, Lights, Sky, SKY_HORIZON } from './Environment';
+import { Clouds, Lights, Sky, SKY_HORIZON, SUN_DIR } from './Environment';
+import { loadPhotoTextures } from './photoTextures';
 import { Interaction } from './Interaction';
 import { Grass, Islands } from './Islands';
 import { Mobs } from './Mobs';
@@ -52,15 +53,30 @@ class ExposureEffect extends Effect {
 
 function RealisticEffects() {
   const exposure = useMemo(() => new ExposureEffect(0.62), []);
+  const camera = useThree((s) => s.camera);
+  // Light source for the god-ray pass: a disc far along the sun direction (hidden at night).
+  const [sun, setSun] = useState<THREE.Mesh | null>(null);
+  useFrame(() => {
+    if (!sun) return;
+    sun.position.copy(camera.position).addScaledVector(SUN_DIR, 900);
+    sun.visible = SUN_DIR.y > -0.05;
+  });
   return (
-    <EffectComposer multisampling={0}>
-      <N8AO aoRadius={2.2} distanceFalloff={1.2} intensity={2.4} quality="high" halfRes={false} />
-      <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.3} intensity={0.45} />
-      <primitive object={exposure} />
-      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <SMAA />
-      <Vignette offset={0.35} darkness={0.35} />
-    </EffectComposer>
+    <>
+      <mesh ref={setSun} frustumCulled={false}>
+        <sphereGeometry args={[28, 16, 12]} />
+        <meshBasicMaterial color="#fff4dc" fog={false} toneMapped={false} />
+      </mesh>
+      <EffectComposer multisampling={0}>
+        <N8AO aoRadius={2.4} distanceFalloff={1.2} intensity={2.6} quality="ultra" halfRes={false} />
+        {sun ? <GodRays sun={sun} samples={90} density={0.97} decay={0.94} weight={0.32} exposure={0.42} clampMax={1} blur /> : <></>}
+        <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.3} intensity={0.45} />
+        <primitive object={exposure} />
+        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        <SMAA />
+        <Vignette offset={0.35} darkness={0.35} />
+      </EffectComposer>
+    </>
   );
 }
 
@@ -69,11 +85,14 @@ export function Game({ quality }: { quality: Quality }) {
   const setLocked = useGame((s) => s.setLocked);
   useEffect(() => () => setLocked(false), [setLocked]);
   const realistic = quality === 'realistic';
+  useEffect(() => {
+    if (realistic) loadPhotoTextures();
+  }, [realistic]);
 
   return (
     <>
       {/* Contact-hardening soft shadows (PCSS) — patches shaders, so mount before anything compiles. */}
-      {realistic && <SoftShadows size={18} samples={14} focus={0.6} />}
+      {realistic && <SoftShadows size={18} samples={20} focus={0.6} />}
       <color attach="background" args={[SKY_HORIZON]} />
       <fog attach="fog" args={[SKY_HORIZON, realistic ? 110 : 70, realistic ? 480 : 300]} />
       {realistic ? <RealisticSky /> : <Sky />}
