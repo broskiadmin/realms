@@ -2,9 +2,12 @@ node_modules
 dist
 .vite
 *.log
+*.tsbuildinfo
 
 # Runtime chat log between the game and the steward session (personal, regenerated)
 public/chat.jsonl
+# Multiplayer world saves (runtime data)
+server-data/
 # Scratch screenshots
 .shots/
 # Machine-specific fraigent hooks (absolute paths into the local fraigent install)

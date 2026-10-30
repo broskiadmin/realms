@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { clock, DAY_LENGTH, dayNumber, dayPhase, IS_TOUCH, isNight, player } from '../game/fx';
+import { MP_WORLD } from '../game/mode';
+import { net, remotes } from '../game/net';
 import { NPC_BY_ID, questProgress, questShort } from '../game/npcs';
 import { ISLANDS } from '../game/world';
 import { ITEMS, MAT_INFO, MATS, TOOLS, useGame, type ItemId, type Tool } from '../game/store';
@@ -188,6 +190,22 @@ function Clock() {
   );
 }
 
+/** Multiplayer status: world name and how many players are here. */
+function Online() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!MP_WORLD) return null;
+  return (
+    <div className={`online ${net.connected ? '' : 'online--off'}`}>
+      <span className="server__dot server__dot--live" />
+      {net.connected ? `${net.worldName} · ${remotes.size + 1} online` : 'Connecting…'}
+    </div>
+  );
+}
+
 /** Active tasks under the clock, plus where the trader is if one is around. */
 function Tasks() {
   const quests = useGame((s) => s.quests);
@@ -247,6 +265,7 @@ export function HUD() {
     <div className={`hud ${locked ? '' : 'hud--dim'} ${IS_TOUCH ? 'hud--touch' : ''}`}>
       <Crosshair />
       <Clock />
+      <Online />
       <Tasks />
       <Vitals />
       <Hotbar />

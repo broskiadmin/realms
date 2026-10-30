@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { MP_WORLD } from './mode';
 
 export type ItemId =
   | 'wood' | 'stone' | 'coal' | 'copper' | 'sunstone' | 'skyglass'
@@ -127,7 +128,9 @@ interface Toast {
 
 export interface ChatLine {
   id: number;
-  from: 'you' | 'claude' | 'system';
+  from: 'you' | 'claude' | 'system' | 'player';
+  /** Speaker name for other players' lines. */
+  name?: string;
   text: string;
   at: number;
 }
@@ -198,7 +201,7 @@ interface GameState {
   tickVitals: (dt: number, sprinting: boolean) => void;
   revive: () => void;
   setWorldTime: (t: number) => void;
-  pushChat: (from: ChatLine['from'], text: string) => void;
+  pushChat: (from: ChatLine['from'], text: string, name?: string) => void;
   setChatOpen: (open: boolean) => void;
   setCraftOpen: (open: boolean) => void;
   /** Deduct a cost if affordable; returns whether it was paid. */
@@ -221,6 +224,8 @@ const START_INVENTORY: Record<ItemId, number> = {
 
 let toastSeq = 1;
 let pieceSeq = Date.now();
+/** Random per-tab prefix so piece/bench ids never collide between multiplayer clients. */
+const CLIENT = Math.random().toString(36).slice(2, 6);
 
 export const useGame = create<GameState>()(
   persist(
@@ -274,7 +279,7 @@ export const useGame = create<GameState>()(
         if (pieces.some((q) => pieceKey(q) === key)) return false;
         set({
           inventory: { ...inventory, [p.mat]: inventory[p.mat] - cost },
-          pieces: [...pieces, { ...p, id: `p${pieceSeq++}` }],
+          pieces: [...pieces, { ...p, id: `p${CLIENT}${pieceSeq++}` }],
         });
         return true;
       },
@@ -399,8 +404,8 @@ export const useGame = create<GameState>()(
 
       revive: () => set({ koUntil: 0, health: MAX_HEALTH, hunger: Math.max(get().hunger, 60) }),
       setWorldTime: (t) => set({ worldTime: t }),
-      pushChat: (from, text) =>
-        set({ chat: [...get().chat, { id: toastSeq++, from, text, at: performance.now() }].slice(-50) }),
+      pushChat: (from, text, name) =>
+        set({ chat: [...get().chat, { id: toastSeq++, from, text, name, at: performance.now() }].slice(-50) }),
       setChatOpen: (open) => set({ chatOpen: open }),
       setCraftOpen: (open) => set({ craftOpen: open }),
       spend: (cost) => {
@@ -428,11 +433,12 @@ export const useGame = create<GameState>()(
       },
       setTrader: (t, nextAt) => set(nextAt === undefined ? { trader: t } : { trader: t, nextTraderAt: nextAt }),
       setDialog: (d) => set({ dialog: d }),
-      addBench: (b) => set({ benches: [...get().benches, { ...b, id: `b${pieceSeq++}` }] }),
+      addBench: (b) => set({ benches: [...get().benches, { ...b, id: `b${CLIENT}${pieceSeq++}` }] }),
       removeBench: (id) => set({ benches: get().benches.filter((b) => b.id !== id) }),
     }),
     {
-      name: 'realms-save-v1',
+      // Each multiplayer world keeps its own personal save (inventory, vitals, tasks).
+      name: MP_WORLD ? `realms-mp-${MP_WORLD}` : 'realms-save-v1',
       partialize: (s) => ({
         inventory: s.inventory,
         pieces: s.pieces,

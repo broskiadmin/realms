@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { IS_TOUCH } from './game/fx';
+import { startNet } from './game/net';
 import { Game } from './scene/Game';
 import { INITIAL_QUALITY, saveQuality, type Quality } from './scene/quality';
 import { Chat } from './ui/Chat';
@@ -13,6 +14,7 @@ import { Menu } from './ui/Menu';
 
 export default function App() {
   const [quality, setQualityState] = useState<Quality>(INITIAL_QUALITY);
+  useEffect(startNet, []);
   const setQuality = (q: Quality) => {
     saveQuality(q); // reloads when switching into/out of Realistic
     setQualityState(q);

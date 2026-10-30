@@ -19,6 +19,7 @@ import { Ghost, Pieces } from './Pieces';
 import { Player } from './Player';
 import type { Quality } from './quality';
 import { RealisticClouds, RealisticSky } from './RealisticSky';
+import { RemotePlayers } from './RemotePlayers';
 import { Resources } from './Resources';
 import { Viewmodel } from './Viewmodel';
 
@@ -87,6 +88,7 @@ export function Game({ quality }: { quality: Quality }) {
         <Npcs />
         <TraderCart />
       </group>
+      <RemotePlayers />
       <Grass />
       {realistic ? <RealisticClouds /> : <Clouds />}
       <Ghost />

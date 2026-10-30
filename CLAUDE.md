@@ -106,6 +106,14 @@ controller.
   `natural()` to mute palettes, and adds `RealisticSky.tsx` (Preetham sky + PMREM env lighting, stars,
   drei volumetric clouds), PCSS soft shadows, 4K shadow map, N8AO + ACES. Switching in/out reloads the page.
   Textures are procedural (`src/scene/textures.ts`).
+- **Multiplayer.** `server/mp.ts` is a Vite plugin (registered in `vite.config.ts`) hosting the game server
+  inside the dev server: `GET/POST {base}mp/servers` (server list / create world) and `WS {base}mp/ws?world=&name=`.
+  Worlds persist to `server-data/<id>.json` (gitignored). Shared: pieces, benches, depleted nodes, world clock.
+  Per-player (localStorage key `realms-mp-<world>`): inventory, vitals, tasks. Mobs/wisps/trader are NOT synced.
+  Client: `src/game/net.ts` (diffs store changes → server; applies remote ops), `src/game/mode.ts`
+  (`?world=<id>` selects multiplayer), `src/scene/RemotePlayers.tsx`, `src/ui/ServerList.tsx`.
+  **Changing `server/` or `vite.config.ts` needs an app restart.** In multiplayer, chat goes to players and
+  only `@claude …` messages reach this session (prefixed with the player's name).
 - **In-game chat ↔ this steward session.** Messages typed in game (T / Enter, or the Chat button on
   touch) arrive in this tmux pane prefixed `[realms chat]` via fraigent-command's send-keys endpoint
   (target `fraigent_steward_realms:0`, see `src/game/chat.ts`). **Reply in-game** with

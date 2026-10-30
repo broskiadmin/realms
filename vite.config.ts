@@ -1,5 +1,7 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { realmsMultiplayer } from './server/mp';
 
 // Run under fraigent-command's `/app/<name>/` reverse proxy when the
 // apps-backend launcher sets FRAIGENT_PARENT_PORT (it does, by default).
@@ -44,7 +46,8 @@ const BASE = PARENT_PORT && APP_NAME ? `/app/${APP_NAME}/` : '/';
 
 export default defineConfig({
   base: BASE,
-  plugins: [react()],
+  // realmsMultiplayer hosts the game server (server list + world WebSockets) in this dev server.
+  plugins: [react(), realmsMultiplayer(fileURLToPath(new URL('./server-data', import.meta.url)))],
   server: PARENT_PORT
     ? {
         hmr: {

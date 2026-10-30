@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { pollReplies, sendToSteward } from '../game/chat';
 import { IS_TOUCH } from '../game/fx';
+import { MP_WORLD, playerName } from '../game/mode';
+import { sendChat } from '../game/net';
 import { summonTraderToPlayer } from '../game/npcs';
 import { useGame } from '../game/store';
 
@@ -62,7 +64,15 @@ export function Chat() {
     if (!text) return;
     const g = useGame.getState();
     g.pushChat('you', text);
-    if (!(await sendToSteward(text))) g.pushChat('system', "Couldn't reach Claude — is fraigent-command running?");
+    // Multiplayer: chat goes to the other players; "@claude …" also reaches the steward.
+    let toClaude = text;
+    if (MP_WORLD) {
+      sendChat(text);
+      const m = /^@claude\b[:,]?\s*(.*)$/i.exec(text);
+      if (!m) return;
+      toClaude = `(${playerName()}) ${m[1]}`;
+    }
+    if (!(await sendToSteward(toClaude))) g.pushChat('system', "Couldn't reach Claude — is fraigent-command running?");
   };
 
   const now = performance.now();
@@ -79,6 +89,7 @@ export function Chat() {
           >
             {l.from === 'claude' && <b>&lt;Claude&gt; </b>}
             {l.from === 'you' && <b>&lt;You&gt; </b>}
+            {l.from === 'player' && <b>&lt;{l.name}&gt; </b>}
             {l.text}
           </div>
         ))}
@@ -89,7 +100,7 @@ export function Chat() {
           className="chat__input"
           value={draft}
           maxLength={400}
-          placeholder="Say something to Claude…"
+          placeholder={MP_WORLD ? 'Chat with players… (@claude to ask Claude)' : 'Say something to Claude…'}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();

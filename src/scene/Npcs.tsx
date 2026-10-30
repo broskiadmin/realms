@@ -8,7 +8,7 @@ import { useGame } from '../game/store';
 import { geo, pieceMaterials, surface, toon } from './materials';
 
 /** Chunky stylised villager built from rounded boxes, with a hat per role. */
-function Humanoid({ look, ud }: { look: NpcLook; ud: Record<string, unknown> }) {
+export function Humanoid({ look, ud }: { look: NpcLook; ud: Record<string, unknown> }) {
   const skin = toon(look.skin);
   const shirt = toon(look.shirt);
   const pants = toon(look.pants);

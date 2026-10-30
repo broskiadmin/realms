@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { IS_TOUCH } from '../game/fx';
+import { MP_WORLD } from '../game/mode';
+import { net } from '../game/net';
 import type { Quality } from '../scene/quality';
+import { ServerList } from './ServerList';
 import { useGame } from '../game/store';
 
 const CONTROLS: [string, string][] = [
@@ -50,10 +53,14 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
   const dialog = useGame((s) => s.dialog);
   const resetWorld = useGame((s) => s.resetWorld);
   const [confirm, setConfirm] = useState(false);
-  // Stay mounted while playing: PointerLockControls binds its click handler to #play-btn once.
+  const [view, setView] = useState<'main' | 'servers'>('main');
+  // Stay mounted while playing: PointerLockControls binds its click handler to #play-btn once,
+  // so the server list hides the main view with CSS instead of unmounting it.
   return (
     <div className={`menu ${locked || craftOpen || dialog ? 'menu--hidden' : ''}`}>
       <div className="menu__card">
+        {view === 'servers' && <ServerList onBack={() => setView('main')} />}
+        <div style={view === 'servers' ? { display: 'none' } : undefined}>
         <h1 className="logo">
           <span>R</span>
           <span>E</span>
@@ -62,7 +69,7 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
           <span>M</span>
           <span>S</span>
         </h1>
-        <p className="tagline">Gather. Build. Bridge the sky.</p>
+        <p className="tagline">{MP_WORLD ? `Multiplayer · ${net.worldName || MP_WORLD}` : 'Gather. Build. Bridge the sky.'}</p>
         <button id="play-btn" className="play" onClick={IS_TOUCH ? startTouch : undefined}>
           {started ? 'Resume' : 'Play'}
         </button>
@@ -75,10 +82,14 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
           ))}
         </div>
         <div className="menu__row">
+          <button className="ghost-btn" onClick={() => setView('servers')}>
+            Multiplayer
+          </button>
           <button className="ghost-btn" onClick={() => setQuality(NEXT_QUALITY[quality])}>
             Graphics: {QUALITY_LABEL[quality]}
           </button>
-          {confirm ? (
+          {/* Resetting would wipe shared builds in a multiplayer world, so it's singleplayer-only. */}
+          {MP_WORLD ? null : confirm ? (
             <>
               <button
                 className="ghost-btn danger"
@@ -99,7 +110,10 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
             </button>
           )}
         </div>
-        <p className="fine">Your world saves automatically in this browser.</p>
+        <p className="fine">
+          {MP_WORLD ? 'Builds are shared with everyone in this world.' : 'Your world saves automatically in this browser.'}
+        </p>
+        </div>
       </div>
     </div>
   );
