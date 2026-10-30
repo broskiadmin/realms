@@ -27,7 +27,8 @@ export function reportCrash(kind: string, detail: string) {
       root.querySelector('.crash__msg')!.textContent = msg;
     }
   }
-  if (reported) return;
+  // Automated screenshot runs (navigator.webdriver) surface errors in their own logs; don't page the steward.
+  if (reported || navigator.webdriver) return;
   reported = true;
   void sendToSteward(`[crash report] ${msg} | quality=${quality} world=${MP_WORLD ?? 'single'} ua=${navigator.userAgent.slice(0, 120)}`);
 }

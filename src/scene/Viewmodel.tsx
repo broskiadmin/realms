@@ -4,6 +4,7 @@ import type * as THREE from 'three';
 import { player, swing } from '../game/fx';
 import { PICK_TIERS, useGame } from '../game/store';
 import { surface } from './materials';
+import { REALISTIC } from './quality';
 
 function overlayMat(color: string, glow = 0, metal = false) {
   return surface({
@@ -35,7 +36,8 @@ export function Viewmodel() {
 
   useEffect(() => {
     const t = PICK_TIERS[tier];
-    mats.head.color.set(t.color);
+    // Realistic mode: the starter pick is plain forged iron rather than cartoon purple.
+    mats.head.color.set(REALISTIC && tier === 0 ? '#8d939b' : t.color);
     mats.head.emissive.set(t.glow ? t.color : '#000000');
     mats.head.emissiveIntensity = t.glow;
   }, [tier, mats]);

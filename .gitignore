@@ -10,6 +10,8 @@ public/chat.jsonl
 public/assets/ph/
 # Multiplayer world saves (runtime data)
 server-data/
+# Headless browser for screenshot checks (scripts/shot.mjs)
+.browsers/
 # Scratch screenshots
 .shots/
 # Machine-specific fraigent hooks (absolute paths into the local fraigent install)

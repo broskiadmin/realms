@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { fbm, mulberry32, noise2, smoothstep } from '../game/noise';
 import { BIOMES, ISLANDS, edgeT, islandHeight, radiusAt, randomSpot, topAt, type IslandDef } from '../game/world';
 import { surface } from './materials';
@@ -118,7 +119,8 @@ const islandMaterial = (() => {
           vec3 grass = mix(texture2D(tGrassPhoto, vWPos.xz * 0.12).rgb, texture2D(tGrassPhoto, vWPos.xz * 0.031 + 0.37).rgb, 0.35);
           vec3 rock = mix(triplanar(tRockPhoto, vWPos, bw, 0.1), triplanar(tRockPhoto, vWPos, bw, 0.027), 0.35);
           vec3 photo = mix(rock, grass, flatness);
-          diffuseColor.rgb = photo * mix(vec3(1.0), diffuseColor.rgb * 2.4, 0.3);
+          // Slight green lift: the scanned meadow reads olive/yellow under the warm sun.
+          diffuseColor.rgb = photo * mix(vec3(1.0), diffuseColor.rgb * 2.4, 0.3) * mix(vec3(1.0), vec3(0.86, 1.0, 0.8), flatness);
         } else {
           vec3 rock = triplanar(tRock, vWPos, bw, 0.18);
           vec3 grass = texture2D(tGrass, vWPos.xz * 0.3).rgb;
@@ -167,6 +169,65 @@ function tuftGeometry(): THREE.BufferGeometry {
   return g;
 }
 
+/**
+ * Realistic tuft: 8 thin, tapered, curved blades (3 segments each) with dark
+ * roots and sun-bleached tips. Normals lean upward so the field lights evenly.
+ */
+function realisticTuftGeometry(): THREE.BufferGeometry {
+  const rnd = mulberry32(7);
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const SEG = 3;
+  for (let b = 0; b < 8; b++) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd()) * 0.14;
+    const bx = Math.cos(a) * r;
+    const bz = Math.sin(a) * r;
+    const face = rnd() * Math.PI * 2;
+    const fx = Math.cos(face);
+    const fz = Math.sin(face);
+    const h = 0.22 + rnd() * 0.3;
+    const w = 0.012 + rnd() * 0.01;
+    const bend = 0.08 + rnd() * 0.16;
+    const nx = -fz * 0.4;
+    const nz = fx * 0.4;
+    const nl = Math.hypot(nx, 1, nz);
+    const base = pos.length / 3;
+    for (let s = 0; s <= SEG; s++) {
+      const t = s / SEG;
+      const y = h * t;
+      const off = bend * t * t;
+      const half = w * (1 - t * 0.92);
+      const cx = bx + Math.cos(a) * off;
+      const cz = bz + Math.sin(a) * off;
+      pos.push(cx - fx * half, y, cz - fz * half, cx + fx * half, y, cz + fz * half);
+      for (let k = 0; k < 2; k++) nor.push(nx / nl, 1 / nl, nz / nl);
+      const shade = 0.3 + 0.62 * t;
+      const tip = t > 0.85 ? (t - 0.85) * 0.8 : 0;
+      for (let k = 0; k < 2; k++) col.push(shade + tip * 0.25, shade + tip * 0.2, shade * 0.8);
+    }
+    for (let s = 0; s < SEG; s++) {
+      const i = base + s * 2;
+      idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+/** Realistic flower: thin stem with a small daisy-like head. */
+function realisticFlowerGeometry(): THREE.BufferGeometry {
+  const stem = new THREE.CylinderGeometry(0.004, 0.005, 0.32, 4).translate(0, 0.16, 0);
+  const head = new THREE.CylinderGeometry(0.03, 0.022, 0.008, 10).translate(0, 0.325, 0);
+  return mergeGeometries([stem.toNonIndexed(), head.toNonIndexed()])!;
+}
+
 export const windUniform = { value: 0 };
 
 function windMaterial(opts: THREE.MeshLambertMaterialParameters, strength: number): THREE.Material {
@@ -195,9 +256,8 @@ const FLOWER_COLORS = ['#ffffff', '#ffe066', '#ff8fc7', '#c39bff', '#ff7b54'];
 
 export function Grass() {
   const { tufts, flowers } = useMemo(() => {
-    const tuftGeo = tuftGeometry();
-    const flowerGeo = new THREE.IcosahedronGeometry(0.09, 0);
-    flowerGeo.translate(0, 0.4, 0);
+    const tuftGeo = REALISTIC ? realisticTuftGeometry() : tuftGeometry();
+    const flowerGeo = REALISTIC ? realisticFlowerGeometry() : new THREE.IcosahedronGeometry(0.09, 0).translate(0, 0.4, 0);
     const rng = mulberry32(42);
     const tm: THREE.Matrix4[] = [];
     const tc: THREE.Color[] = [];
@@ -207,15 +267,16 @@ export function Grass() {
     const up = new THREE.Vector3(0, 1, 0);
     for (const isl of ISLANDS) {
       const pal = BIOMES[isl.biome];
-      // Realistic mode: ~7x denser, slightly taller grass.
+      // Realistic mode: ~7x denser field of thin blades.
       const count = Math.floor(Math.PI * isl.radius * isl.radius * isl.grassDensity * (REALISTIC ? 7 : 1));
-      const ga = natural(new THREE.Color(pal.grass[0]));
-      const gb = natural(new THREE.Color(pal.grass[1]));
+      // Living grass is a fairly saturated green; skip most of natural()'s muting for the blades.
+      const ga = REALISTIC ? new THREE.Color(pal.grass[0]).offsetHSL(0.01, -0.12, -0.12) : natural(new THREE.Color(pal.grass[0]));
+      const gb = REALISTIC ? new THREE.Color(pal.grass[1]).offsetHSL(-0.02, -0.1, -0.1) : natural(new THREE.Color(pal.grass[1]));
       for (let i = 0; i < count; i++) {
         const p = randomSpot(isl, rng, 0.9);
         const y = islandHeight(isl, p.x, p.z);
         if (y === null || edgeT(isl, p.x, p.z) > 0.9) continue;
-        const s = (0.55 + rng() * 0.5) * (REALISTIC ? 1.25 : 1);
+        const s = REALISTIC ? 0.75 + rng() * 0.6 : 0.55 + rng() * 0.5;
         q.setFromAxisAngle(up, rng() * Math.PI * 2);
         tm.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, y - 0.05, p.z), q, new THREE.Vector3(s, s, s)));
         tc.push(ga.clone().lerp(gb, rng()));

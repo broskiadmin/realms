@@ -6,9 +6,94 @@ import { player } from '../game/fx';
 import { NPCS, npcSpot, questDone, type NpcLook } from '../game/npcs';
 import { useGame } from '../game/store';
 import { geo, pieceMaterials, surface, toon } from './materials';
+import { REALISTIC } from './quality';
 
 /** Chunky stylised villager built from rounded boxes, with a hat per role. */
+const capsule = new THREE.CapsuleGeometry(1, 1, 6, 16);
+const sphere = new THREE.SphereGeometry(1, 24, 18);
+
+/** Realistic-mode person: smooth capsule limbs, real head proportions, face, hair, then the role's hat. */
+function RealHumanoid({ look, ud }: { look: NpcLook; ud: Record<string, unknown> }) {
+  const skin = toon(look.skin);
+  const shirt = toon(look.shirt);
+  const pants = toon(look.pants);
+  const hat = toon(look.hatColor);
+  const hair = toon(look.beard ?? '#3b2a1e');
+  const shoe = toon('#2a211b');
+  const white = toon('#f2efe8');
+  const iris = toon('#2b1d14');
+  const top = 1.78; // crown of the head
+  return (
+    <group>
+      {[-1, 1].map((s) => (
+        <group key={s}>
+          <mesh geometry={capsule} material={pants} position={[s * 0.1, 0.47, 0]} scale={[0.085, 0.33, 0.085]} castShadow userData={ud} />
+          <mesh geometry={sphere} material={shoe} position={[s * 0.1, 0.06, 0.05]} scale={[0.07, 0.05, 0.13]} castShadow userData={ud} />
+          <mesh geometry={capsule} material={shirt} position={[s * 0.27, 1.12, 0]} rotation={[0, 0, s * 0.1]} scale={[0.068, 0.19, 0.068]} castShadow userData={ud} />
+          <mesh geometry={sphere} material={skin} position={[s * 0.295, 0.84, 0.01]} scale={[0.045, 0.06, 0.035]} userData={ud} />
+          <mesh geometry={sphere} material={white} position={[s * 0.045, 1.655, 0.1]} scale={0.019} userData={ud} />
+          <mesh geometry={sphere} material={iris} position={[s * 0.045, 1.655, 0.115]} scale={0.009} userData={ud} />
+          <mesh geometry={sphere} material={skin} position={[s * 0.118, 1.64, 0]} scale={[0.018, 0.03, 0.02]} userData={ud} />
+          <mesh geometry={geo.box} material={hair} position={[s * 0.047, 1.69, 0.108]} rotation={[0, 0, s * -0.12]} scale={[0.04, 0.008, 0.01]} userData={ud} />
+        </group>
+      ))}
+      <mesh geometry={capsule} material={shirt} position={[0, 1.15, 0]} scale={[0.215, 0.19, 0.14]} castShadow userData={ud} />
+      <mesh geometry={capsule} material={pants} position={[0, 0.86, 0]} scale={[0.19, 0.04, 0.125]} userData={ud} />
+      <mesh material={skin} position={[0, 1.48, 0]} userData={ud}>
+        <cylinderGeometry args={[0.05, 0.06, 0.12, 12]} />
+      </mesh>
+      <mesh geometry={sphere} material={skin} position={[0, 1.64, 0]} scale={[0.105, 0.13, 0.115]} castShadow userData={ud} />
+      <mesh geometry={cone} material={skin} position={[0, 1.625, 0.118]} rotation={[Math.PI / 2, 0, 0]} scale={[0.017, 0.04, 0.02]} userData={ud} />
+      <mesh geometry={sphere} material={hair} position={[0, 1.68, -0.012]} scale={[0.11, 0.105, 0.115]} userData={ud} />
+      {look.beard && <mesh geometry={sphere} material={hair} position={[0, 1.555, 0.06]} scale={[0.085, 0.07, 0.07]} userData={ud} />}
+      {look.hat === 'straw' && (
+        <>
+          <mesh material={hat} position={[0, top, 0]} castShadow userData={ud}>
+            <cylinderGeometry args={[0.3, 0.3, 0.02, 24]} />
+          </mesh>
+          <mesh material={hat} position={[0, top + 0.06, 0]} userData={ud}>
+            <cylinderGeometry args={[0.11, 0.13, 0.12, 18]} />
+          </mesh>
+        </>
+      )}
+      {look.hat === 'flannel' && <mesh geometry={sphere} material={hat} position={[0, top - 0.04, -0.01]} scale={[0.118, 0.06, 0.125]} userData={ud} />}
+      {look.hat === 'helmet' && (
+        <>
+          <mesh material={hat} position={[0, top - 0.06, 0]} castShadow userData={ud}>
+            <sphereGeometry args={[0.135, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          </mesh>
+          <mesh material={toon('#fff6c2', 1.6)} position={[0, top - 0.01, 0.125]} rotation={[Math.PI / 2, 0, 0]} userData={ud}>
+            <cylinderGeometry args={[0.03, 0.03, 0.03, 12]} />
+          </mesh>
+        </>
+      )}
+      {look.hat === 'wizard' && (
+        <>
+          <mesh material={hat} position={[0, top - 0.02, 0]} userData={ud}>
+            <cylinderGeometry args={[0.24, 0.24, 0.015, 24]} />
+          </mesh>
+          <mesh material={hat} position={[0, top + 0.2, -0.02]} rotation={[-0.12, 0, 0]} castShadow userData={ud}>
+            <coneGeometry args={[0.12, 0.42, 16]} />
+          </mesh>
+        </>
+      )}
+      {look.hat === 'hood' && (
+        <mesh material={hat} position={[0, 1.66, -0.02]} castShadow userData={ud}>
+          <sphereGeometry args={[0.15, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+const cone = new THREE.ConeGeometry(1, 1, 10);
+
 export function Humanoid({ look, ud }: { look: NpcLook; ud: Record<string, unknown> }) {
+  if (REALISTIC) return <RealHumanoid look={look} ud={ud} />;
+  return <ToonHumanoid look={look} ud={ud} />;
+}
+
+function ToonHumanoid({ look, ud }: { look: NpcLook; ud: Record<string, unknown> }) {
   const skin = toon(look.skin);
   const shirt = toon(look.shirt);
   const pants = toon(look.pants);
@@ -95,7 +180,7 @@ function Villager({ id }: { id: string }) {
       const state2 = !q || q.status === 'offered' ? 'offer' : questDone(q) ? 'done' : 'active';
       markMat.color.set(MARK_COLORS[state2]).multiplyScalar(state2 === 'active' ? 1 : 1.8);
       m.rotation.y = t * 2;
-      m.position.y = 2.95 + Math.sin(t * 3) * 0.08 + (npc.look.hat === 'wizard' ? 0.35 : 0);
+      m.position.y = (REALISTIC ? 2.3 : 2.95) + Math.sin(t * 3) * 0.08 + (npc.look.hat === 'wizard' ? 0.35 : 0);
     }
   });
 
@@ -104,7 +189,7 @@ function Villager({ id }: { id: string }) {
       <group ref={body}>
         <Humanoid look={npc.look} ud={ud} />
       </group>
-      <mesh ref={mark} material={markMat} scale={[0.22, 0.32, 0.22]}>
+      <mesh ref={mark} material={markMat} scale={REALISTIC ? [0.1, 0.15, 0.1] : [0.22, 0.32, 0.22]}>
         <octahedronGeometry args={[1, 0]} />
       </mesh>
     </group>

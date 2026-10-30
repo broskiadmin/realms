@@ -1,10 +1,12 @@
-import { memo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
 import { hitTimes } from '../game/fx';
 import { useGame } from '../game/store';
 import { BIOMES, ISLANDS, NODES, ORE_INFO, type ResourceNode } from '../game/world';
 import { geo, toon } from './materials';
+import { REALISTIC } from './quality';
+import { boulderGeos, RealisticTree } from './RealisticFlora';
 import { barkDetail, leafDetail, rockDetail } from './textures';
 
 /** Wobble on hit, pop in on (re)spawn. */
@@ -36,7 +38,14 @@ const Tree = memo(function Tree({ n }: { n: ResourceNode }) {
   const leafA = toon(pal.foliage[0], 0, leafDetail);
   const leafB = toon(pal.foliage[1], 0, leafDetail);
   const bark = toon(n.variant === 1 ? '#7a4b2a' : '#8b5a2b', 0, barkDetail);
-  const ud = { kind: 'node', id: n.id };
+  const ud = useMemo(() => ({ kind: 'node', id: n.id }), [n.id]);
+  if (REALISTIC) {
+    return (
+      <group ref={ref} position={[n.x, n.y - 0.05, n.z]} rotation={[0, n.rot, 0]}>
+        <RealisticTree n={n} ud={ud} />
+      </group>
+    );
+  }
   return (
     <group ref={ref} position={[n.x, n.y - 0.1, n.z]} rotation={[0, n.rot, 0]}>
       <mesh geometry={geo.trunk} material={bark} position={[0, 1.3, 0]} castShadow userData={ud} />
@@ -62,10 +71,12 @@ const Rock = memo(function Rock({ n }: { n: ResourceNode }) {
   const ref = useNodeAnim(n.id, n.scale);
   const pal = BIOMES[ISLANDS[n.island].biome];
   const ud = { kind: 'node', id: n.id };
+  // Realistic: smooth noise-sculpted boulders instead of faceted low-poly gems.
+  const shape = (i: number) => (REALISTIC ? boulderGeos[i % 3] : geo.rock[i % 3]);
   return (
     <group ref={ref} position={[n.x, n.y, n.z]} rotation={[0, n.rot, 0]}>
-      <mesh geometry={geo.rock[n.variant % 3]} material={toon(pal.rock[0], 0, rockDetail)} position={[0, 0.45, 0]} scale={[1.15, 0.85, 1]} castShadow receiveShadow userData={ud} />
-      <mesh geometry={geo.rock[(n.variant + 1) % 3]} material={toon(pal.rock[1], 0, rockDetail)} position={[0.75, 0.25, 0.3]} scale={0.5} castShadow userData={ud} />
+      <mesh geometry={shape(n.variant)} material={toon(pal.rock[0], 0, rockDetail)} position={[0, 0.45, 0]} scale={[1.15, 0.85, 1]} castShadow receiveShadow userData={ud} />
+      <mesh geometry={shape(n.variant + 1)} material={toon(pal.rock[1], 0, rockDetail)} position={[0.75, 0.25, 0.3]} scale={0.5} castShadow userData={ud} />
     </group>
   );
 });
@@ -86,7 +97,7 @@ const Ore = memo(function Ore({ n }: { n: ResourceNode }) {
   const ud = { kind: 'node', id: n.id };
   return (
     <group ref={ref} position={[n.x, n.y, n.z]} rotation={[0, n.rot, 0]}>
-      <mesh geometry={geo.rock[n.variant % 3]} material={rockMat} position={[0, 0.5, 0]} scale={[1.05, 0.8, 0.95]} castShadow receiveShadow userData={ud} />
+      <mesh geometry={REALISTIC ? boulderGeos[n.variant % 3] : geo.rock[n.variant % 3]} material={rockMat} position={[0, 0.5, 0]} scale={[1.05, 0.8, 0.95]} castShadow receiveShadow userData={ud} />
       {CRYSTALS.map(([x, y, z, tilt, s], i) => (
         <mesh key={i} geometry={geo.crystal} material={gem} position={[x, y, z]} rotation={[tilt * 0.6, i, tilt]} scale={[s * 0.8, s * 1.5, s * 0.8]} castShadow userData={ud} />
       ))}

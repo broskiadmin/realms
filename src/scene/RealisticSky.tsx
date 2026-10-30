@@ -107,18 +107,23 @@ const cloudSprite = (() => {
   c.width = c.height = s;
   const g = c.getContext('2d')!;
   const rnd = mulberry32(99);
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 26; i++) {
     const x = s / 2 + (rnd() - 0.5) * s * 0.45;
     const y = s / 2 + (rnd() - 0.5) * s * 0.35;
     const r = s * (0.12 + rnd() * 0.18);
     const grad = g.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+    grad.addColorStop(0.55, 'rgba(255,255,255,0.45)');
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, s, s);
   }
   return c.toDataURL('image/png');
 })();
+
+// HDR "brighter than white": the exposure pass scales the frame by ~0.6, so unlit clouds need >1 to read as white.
+const CLOUD_WHITE = new THREE.Color('#ffffff').multiplyScalar(1.7);
+const CLOUD_SEA = new THREE.Color('#eef3f8').multiplyScalar(1.6);
 
 const CLOUD_BANKS = (() => {
   const rnd = mulberry32(4242);
@@ -133,21 +138,22 @@ const CLOUD_BANKS = (() => {
 export function RealisticClouds() {
   return (
     <Suspense fallback={null}>
-      <Clouds texture={cloudSprite} material={THREE.MeshLambertMaterial} limit={900} frustumCulled={false}>
+      {/* Unlit: Lambert-lit billboards picked up the brown hemisphere ground colour and looked muddy. */}
+      <Clouds texture={cloudSprite} material={THREE.MeshBasicMaterial} limit={900} frustumCulled={false}>
         {CLOUD_BANKS.map((c) => (
           <Cloud
             key={c.seed}
             seed={c.seed}
             position={c.pos}
             bounds={[c.size, c.size * 0.25, c.size * 0.6]}
-            segments={28}
-            volume={c.size * 0.9}
+            segments={40}
+            volume={c.size * 1.1}
             smallestVolume={0.3}
             growth={4}
             speed={0.04}
             fade={150}
-            opacity={0.85}
-            color="#ffffff"
+            opacity={1}
+            color={CLOUD_WHITE}
           />
         ))}
         {[0, 1, 2, 3].map((i) => (
@@ -162,7 +168,7 @@ export function RealisticClouds() {
             speed={0.02}
             fade={300}
             opacity={0.95}
-            color="#eef3f8"
+            color={CLOUD_SEA}
           />
         ))}
       </Clouds>
