@@ -3,6 +3,7 @@ import { blockedBy, craft, nearBench, RECIPES, type CraftBlock } from '../game/c
 import { IS_TOUCH } from '../game/fx';
 import { ITEMS, PICK_TIERS, useGame, type ItemId } from '../game/store';
 import { releaseMouse, resumeGame } from './panel';
+import { sfx } from '../game/sound';
 
 /** Open the crafting menu (releases the mouse on desktop so recipes are clickable). */
 export function openCrafting() {
@@ -73,7 +74,11 @@ export function Crafting() {
                   className="recipe__btn"
                   disabled={block !== null}
                   title={block ? BLOCK_TEXT[block] : undefined}
-                  onClick={() => setMsg(craft(r))}
+                  onClick={() => {
+                    const msg = craft(r);
+                    if (msg) sfx.craft();
+                    setMsg(msg);
+                  }}
                 >
                   {block === 'owned' ? 'Owned' : 'Craft'}
                 </button>

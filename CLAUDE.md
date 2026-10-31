@@ -117,6 +117,12 @@ controller.
   (`?world=<id>` selects multiplayer), `src/scene/RemotePlayers.tsx`, `src/ui/ServerList.tsx`.
   **Changing `server/` or `vite.config.ts` needs an app restart.** In multiplayer, chat goes to players and
   only `@claude …` messages reach this session (prefixed with the player's name).
+- Night creatures: Gloomwisps (`src/game/hostiles.ts`, stalk/wind-up/dive state machine) and ground
+  predators Duskwolf + Shardback (`src/game/predators.ts`, `src/scene/Predators.tsx`). Every creature has a
+  toon AND a realistic version (realistic = `sculpt()` + `patternMaterial()` from `RealisticAnimals.tsx`) —
+  keep that parity for any new mob. `shot.mjs ... hostiles` freezes and lines them up for a screenshot.
+- Sound: fully procedural Web Audio (`src/game/sound.ts` = `sfx.*` synths + wind bed; `src/scene/SoundSystem.tsx`
+  = ambience/footsteps/animal calls/growls). No audio files. M or the menu toggles mute.
 - **See before you ship visuals.** `node scripts/shot.mjs <out.png> [quality] [worldTime] [x,y,z,yaw] [waitMs]`
   screenshots the running game with the project-local Chromium in `.browsers/` (gitignored; install with
   `PLAYWRIGHT_BROWSERS_PATH=.browsers node_modules/.bin/playwright-core install chromium`). Save shots under

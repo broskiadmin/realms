@@ -4,6 +4,7 @@ import { MP_WORLD } from '../game/mode';
 import { net } from '../game/net';
 import type { Quality } from '../scene/quality';
 import { ServerList } from './ServerList';
+import { isMuted, setMuted, unlockAudio } from '../game/sound';
 import { useGame } from '../game/store';
 
 const CONTROLS: [string, string][] = [
@@ -21,6 +22,7 @@ const CONTROLS: [string, string][] = [
   ['C', 'Crafting'],
   ['Click villager', 'Talk / tasks'],
   ['F3', 'FPS counter'],
+  ['M', 'Mute sound'],
   ['Esc', 'Pause'],
 ];
 
@@ -55,6 +57,7 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
   const resetWorld = useGame((s) => s.resetWorld);
   const [confirm, setConfirm] = useState(false);
   const [view, setView] = useState<'main' | 'servers'>('main');
+  const [muted, setMutedState] = useState(isMuted());
   // Stay mounted while playing: PointerLockControls binds its click handler to #play-btn once,
   // so the server list hides the main view with CSS instead of unmounting it.
   return (
@@ -88,6 +91,16 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
           </button>
           <button className="ghost-btn" onClick={() => setQuality(NEXT_QUALITY[quality])}>
             Graphics: {QUALITY_LABEL[quality]}
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={() => {
+              unlockAudio();
+              setMuted(!muted);
+              setMutedState(!muted);
+            }}
+          >
+            Sound: {muted ? 'Off' : 'On'}
           </button>
           {/* Resetting would wipe shared builds in a multiplayer world, so it's singleplayer-only. */}
           {MP_WORLD ? null : confirm ? (

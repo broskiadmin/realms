@@ -16,6 +16,7 @@ import {
 import { ITEMS, useGame, type Dialog as DialogState } from '../game/store';
 import { ISLANDS } from '../game/world';
 import { releaseMouse, resumeGame } from './panel';
+import { sfx } from '../game/sound';
 
 export function openDialog(d: Exclude<DialogState, null>) {
   if (d.type === 'npc') questFor(d.id);
@@ -87,6 +88,7 @@ function NpcPanel({ id }: { id: string }) {
             className="recipe__btn"
             onClick={() => {
               if (turnInQuest(id)) {
+                sfx.fanfare();
                 setLine(npc.thanks);
                 setError(null);
               }
@@ -137,7 +139,10 @@ function TraderPanel() {
               </div>
               <div className="recipe__desc">{o.stock > 0 ? `${o.stock} left` : 'Sold out'}</div>
             </div>
-            <button className="recipe__btn" disabled={o.stock <= 0 || inv.coin < o.price} onClick={() => setMsg(buyOffer(i))}>
+            <button className="recipe__btn" disabled={o.stock <= 0 || inv.coin < o.price} onClick={() => {
+                sfx.coin();
+                setMsg(buyOffer(i));
+              }}>
               {o.price} coins
             </button>
           </div>
@@ -154,7 +159,10 @@ function TraderPanel() {
               </div>
               <div className="recipe__desc">You have {inv[s.item]}</div>
             </div>
-            <button className="recipe__btn" disabled={inv[s.item] < s.qty} onClick={() => setMsg(sellItem(i))}>
+            <button className="recipe__btn" disabled={inv[s.item] < s.qty} onClick={() => {
+                sfx.coin();
+                setMsg(sellItem(i));
+              }}>
               +{s.price} coins
             </button>
           </div>

@@ -8,6 +8,7 @@ import { openDialog } from '../ui/Dialog';
 import { hitWisp, WISP_HP, WISPS } from '../game/hostiles';
 import { hitMob, MOB_INFO, MOBS } from '../game/mobs';
 import { hitPredator, PREDATOR_INFO, PREDATORS } from '../game/predators';
+import { sfx, type HitKind } from '../game/sound';
 import { computePlacement } from '../game/pieces';
 import { ITEMS, MAT_INFO, pieceKey, useGame, type ItemId, type TargetInfo } from '../game/store';
 import { BIOMES, ISLANDS, NODE_BY_ID, NODE_HP, ORE_INFO, RESPAWN_MS, nodeName, type ResourceNode } from '../game/world';
@@ -36,6 +37,19 @@ function nodeColor(n: ResourceNode): string {
   if (n.kind === 'tree') return BIOMES[ISLANDS[n.island].biome].foliage[0];
   if (n.kind === 'ore') return ORE_INFO[n.ore ?? 'coal'].color;
   return BIOMES[ISLANDS[n.island].biome].rock[0];
+}
+
+/** Which impact sound a pickaxe strike on this target makes. */
+function hitSound(h: { kind: string; id: string | number }): HitKind {
+  if (h.kind === 'node') {
+    const n = NODE_BY_ID.get(h.id as string);
+    return n?.kind === 'tree' ? 'wood' : n?.kind === 'ore' ? 'ore' : 'stone';
+  }
+  if (h.kind === 'mob') return 'flesh';
+  if (h.kind === 'wisp') return 'wisp';
+  if (h.kind === 'predator') return PREDATORS[h.id as number]?.kind === 'shardback' ? 'crystal' : 'flesh';
+  if (h.kind === 'piece' || h.kind === 'bench') return 'build';
+  return 'stone';
 }
 
 function nodeYield(n: ResourceNode, final: boolean): Partial<Record<ItemId, number>> {
@@ -146,6 +160,7 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
       if (pressing && cooldown.current <= 0) {
         cooldown.current = SWING_COOLDOWN;
         swing.t = 0;
+        sfx.swing();
         if (inReach) strike(inReach);
       }
       return;
@@ -165,6 +180,7 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
       if (g.placePiece({ ...placement, mat: g.mat })) {
         lastPlaced.current = key;
         cooldown.current = 0.12;
+        sfx.place(hit ? hit.point : undefined);
       }
     } else if (pressing && !ghost.valid && !occupied && cooldown.current <= 0) {
       cooldown.current = 1;
@@ -214,6 +230,7 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
   function strike(h: Hit) {
     const g = useGame.getState();
     const power = g.pickTier + 1;
+    sfx.hit(hitSound(h), h.point);
     if (h.kind === 'node') {
       const n = NODE_BY_ID.get(h.id as string);
       if (!n) return;
@@ -229,6 +246,8 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
       }
       g.addItems(total);
       if (final) {
+        sfx.breakNode(n.kind === 'tree' ? 'wood' : 'stone', h.point);
+        sfx.pickup();
         damage.delete(n.id);
         g.deplete(n.id, Date.now() + RESPAWN_MS[n.kind]);
       } else {

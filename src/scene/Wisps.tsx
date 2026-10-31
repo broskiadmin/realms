@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { isNight, player } from '../game/fx';
 import { gnawPiece } from '../game/gnaw';
 import { updateWisps, WISP_DAMAGE, WISPS, type Wisp } from '../game/hostiles';
+import { sfx } from '../game/sound';
 import { useGame } from '../game/store';
 import { surface } from './materials';
 import { REALISTIC } from './quality';
@@ -169,6 +170,7 @@ export function Wisps() {
         useGame.getState().hurt(WISP_DAMAGE, 'a Gloomwisp');
       },
       onHitPiece: (id, at) => gnawPiece(id, at, 'A Gloomwisp'),
+      onDive: (w) => sfx.wispDive(w.pos),
     });
   });
   return (

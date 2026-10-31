@@ -11,6 +11,7 @@ import { Benches } from './Benches';
 import { Npcs, TraderCart } from './Npcs';
 import { Wisps } from './Wisps';
 import { Predators } from './Predators';
+import { SoundSystem } from './SoundSystem';
 import { Clouds, Lights, Sky, SKY_HORIZON, SUN_DIR } from './Environment';
 import { loadPhotoTextures } from './photoTextures';
 import { Interaction } from './Interaction';
@@ -150,6 +151,7 @@ export function Game({ quality }: { quality: Quality }) {
       <Interaction world={world} />
       <Viewmodel />
       <Ticker />
+      <SoundSystem />
       <DevRendererHook />
       {!IS_TOUCH && <PointerLockControls selector="#play-btn" onLock={() => setLocked(true)} onUnlock={() => setLocked(false)} />}
       {realistic && <RealisticEffects />}

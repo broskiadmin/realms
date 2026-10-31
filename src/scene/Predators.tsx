@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { player } from '../game/fx';
 import { gnawPiece } from '../game/gnaw';
 import { PREDATOR_INFO, PREDATORS, updatePredators, type Predator } from '../game/predators';
+import { sfx } from '../game/sound';
 import { useGame } from '../game/store';
 import { ellipsoid, mirrorX, roundCone } from './sdf';
 import { geo, toon } from './materials';
@@ -314,6 +315,8 @@ export function Predators() {
     const dt = Math.min(rawDt, 0.05);
     updatePredators(dt, player.pos, {
       onBite: (p, dir) => {
+        if (p.kind === 'duskwolf') sfx.bite({ x: p.x, y: p.y + 0.7, z: p.z });
+        else sfx.slam({ x: p.x, y: p.y + 0.5, z: p.z });
         const push = p.kind === 'duskwolf' ? 6 : 9;
         player.vel.x += dir.x * push;
         player.vel.z += dir.z * push;
