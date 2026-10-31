@@ -88,14 +88,14 @@ const geos = () => (built ??= build());
 const WOLF_FUR = `
   float streak = snoise(vObj * vec3(22.0, 7.0, 22.0) + uSeed) * 0.5 + 0.5;
   float back = smoothstep(0.46, 0.78, vObj.y);
-  vec3 c = mix(vec3(0.2, 0.19, 0.18), vec3(0.035, 0.035, 0.04), back);
+  vec3 c = mix(vec3(0.46, 0.45, 0.44), vec3(0.16, 0.16, 0.18), back);
   diffuseColor.rgb = c * (0.8 + 0.35 * streak);`;
 const WOLF_HEAD = `
   float muzzle = smoothstep(0.12, 0.26, vObj.z) * smoothstep(0.0, -0.06, vObj.y);
-  vec3 c = mix(vec3(0.05, 0.05, 0.055), vec3(0.2, 0.19, 0.18), muzzle);
+  vec3 c = mix(vec3(0.15, 0.15, 0.17), vec3(0.46, 0.45, 0.44), muzzle);
   diffuseColor.rgb = c * (0.88 + 0.2 * snoise(vObj * 30.0 + uSeed));`;
 const WOLF_LEG = `
-  diffuseColor.rgb = vec3(0.05, 0.05, 0.055) * (0.9 + 0.2 * snoise(vObj * 25.0 + uSeed));`;
+  diffuseColor.rgb = vec3(0.17, 0.17, 0.19) * (0.9 + 0.2 * snoise(vObj * 25.0 + uSeed));`;
 const SHARD_SHELL = `
   float n = snoise(vObj * 3.2 + uSeed);
   float crack = 1.0 - smoothstep(0.0, 0.06, abs(snoise(vObj * 5.0 + uSeed * 0.5)));
@@ -118,21 +118,24 @@ interface Rig {
 type Mats = Record<string, THREE.Material & { emissive?: THREE.Color; emissiveIntensity?: number }>;
 
 function eyeMat(color: string) {
-  return new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(3), toneMapped: false });
+  return new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(5), toneMapped: false });
 }
 
 function makeMats(p: Predator): Mats {
   const seed = p.id * 17.3;
   if (p.kind === 'duskwolf') {
+    // Silver-grey fur with a moonlit sheen, bright eyes and a soft eye halo: readable at night.
+    const glow = new THREE.MeshBasicMaterial({ color: '#ffb020', transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
     return REALISTIC
       ? {
-          body: patternMaterial('wolf-fur', WOLF_FUR, seed, { roughness: 0.92, sheen: 0.15, sheenColor: '#8a8a96' }),
-          head: patternMaterial('wolf-head', WOLF_HEAD, seed, { roughness: 0.92, sheen: 0.15, sheenColor: '#8a8a96' }),
-          leg: patternMaterial('wolf-leg', WOLF_LEG, seed, { roughness: 0.92, sheen: 0.1, sheenColor: '#8a8a96' }),
+          body: patternMaterial('wolf-fur', WOLF_FUR, seed, { roughness: 0.85, sheen: 0.55, sheenColor: '#b8c4dd' }),
+          head: patternMaterial('wolf-head', WOLF_HEAD, seed, { roughness: 0.85, sheen: 0.55, sheenColor: '#b8c4dd' }),
+          leg: patternMaterial('wolf-leg', WOLF_LEG, seed, { roughness: 0.85, sheen: 0.4, sheenColor: '#b8c4dd' }),
           dark: plain('#0b0a0b', 0.4),
           eye: eyeMat('#ffb020'),
+          glow,
         }
-      : { body: toon('#3a3a44'), head: toon('#3a3a44'), leg: toon('#2a2a32'), dark: toon('#141418'), eye: eyeMat('#ffb020') };
+      : { body: toon('#5e5e70'), head: toon('#5e5e70'), leg: toon('#4a4a5a'), dark: toon('#141418'), eye: eyeMat('#ffb020'), glow };
   }
   return REALISTIC
     ? {
@@ -159,7 +162,10 @@ function Duskwolf({ rig, m, ud }: { rig: Rig; m: Mats; ud: Record<string, unknow
             <mesh geometry={geo.box} material={m.dark} position={[0, -0.03, 0.29]} scale={0.035} userData={ud} />
             {[-1, 1].map((s) => (
               <group key={s}>
-                <mesh material={m.eye} position={[s * 0.055, 0.035, 0.11]} scale={[0.016, 0.011, 0.01]} userData={ud}>
+                <mesh material={m.eye} position={[s * 0.055, 0.035, 0.11]} scale={[0.02, 0.014, 0.012]} userData={ud}>
+                  <sphereGeometry args={[1, 10, 8]} />
+                </mesh>
+                <mesh material={m.glow} position={[s * 0.055, 0.035, 0.12]} scale={0.055}>
                   <sphereGeometry args={[1, 10, 8]} />
                 </mesh>
                 <mesh material={m.head} position={[s * 0.06, 0.12, -0.01]} rotation={[-0.15, 0, -s * 0.2]} scale={[0.035, 0.085, 0.022]} castShadow userData={ud}>
@@ -192,6 +198,9 @@ function Duskwolf({ rig, m, ud }: { rig: Rig; m: Mats; ud: Record<string, unknow
           {[-1, 1].map((s) => (
             <group key={s}>
               <mesh geometry={geo.box} material={m.eye} position={[s * 0.07, 0.04, 0.151]} scale={[0.06, 0.03, 0.01]} userData={ud} />
+              <mesh material={m.glow} position={[s * 0.07, 0.04, 0.16]} scale={0.08}>
+                <sphereGeometry args={[1, 10, 8]} />
+              </mesh>
               <mesh material={m.head} position={[s * 0.08, 0.17, -0.03]} scale={[0.05, 0.1, 0.03]} userData={ud}>
                 <coneGeometry args={[1, 1, 4]} />
               </mesh>
@@ -295,11 +304,13 @@ function PredatorView({ p }: { p: Predator }) {
       r.tail.rotation.y = Math.sin(t * (p.state === 'chase' ? 6 : 2)) * 0.25;
       r.tail.rotation.x = p.state === 'chase' ? -0.35 : 0;
     }
-    const f = p.flash > 0 ? 0.8 : 0;
+    // Red flash when hit; otherwise wolves keep a faint cool self-glow so their shape reads at night.
+    const hit = p.flash > 0;
+    const base = p.kind === 'duskwolf' ? 0.35 : 0;
     for (const mat of Object.values(mats)) {
       if (mat.emissive && mat !== mats.crystal && !(mat instanceof THREE.MeshBasicMaterial)) {
-        mat.emissive.set('#ff2a2a');
-        mat.emissiveIntensity = f;
+        mat.emissive.set(hit ? '#ff2a2a' : '#2b3550');
+        mat.emissiveIntensity = hit ? 0.8 : base;
       }
     }
   });

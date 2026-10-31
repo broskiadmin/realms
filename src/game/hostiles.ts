@@ -35,7 +35,7 @@ export interface Wisp {
 
 export const WISP_HP = 3;
 const RADIUS = 0.45;
-export const WISP_DAMAGE = 8;
+export const WISP_DAMAGE = 6;
 const MAX_ALIVE = 3;
 const ORBIT_R = 6;
 const DASH_SPEED = 13;

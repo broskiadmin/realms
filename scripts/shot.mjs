@@ -84,7 +84,8 @@ if (extra === 'lineup') {
   });
 }
 await page.waitForTimeout(1500);
-await page.screenshot({ path: out });
+// Software rendering (SwiftShader) can take a long time per frame in Realistic mode.
+await page.screenshot({ path: out, timeout: 120000 });
 const info = await page.evaluate(() => {
   const r = window.__realms?.gl?.info?.render;
   return r ? `draw calls ${r.calls}, triangles ${(r.triangles / 1e6).toFixed(2)}M` : 'renderer stats unavailable';

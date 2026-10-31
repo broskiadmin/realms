@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { player } from '../game/fx';
 import { fbm, mulberry32, noise2, smoothstep } from '../game/noise';
-import { BIOMES, ISLANDS, edgeT, islandHeight, radiusAt, randomSpot, topAt, type IslandDef } from '../game/world';
+import { BIOMES, ISLANDS, edgeT, islandHeight, radiusAt, topAt, type IslandDef } from '../game/world';
 import { surface } from './materials';
 import { natural, REALISTIC } from './quality';
 import { terrainPhoto } from './photoTextures';
@@ -122,7 +122,7 @@ const islandMaterial = (() => {
           vec3 rock = mix(triplanar(tRockPhoto, vWPos, bw, 0.1), triplanar(tRockPhoto, vWPos, bw, 0.027), 0.35);
           vec3 photo = mix(rock, grass, flatness);
           // Slight green lift: the scanned meadow reads olive/yellow under the warm sun.
-          diffuseColor.rgb = photo * mix(vec3(1.0), diffuseColor.rgb * 2.4, 0.3) * mix(vec3(1.0), vec3(0.86, 1.0, 0.8), flatness);
+          diffuseColor.rgb = photo * mix(vec3(1.0), diffuseColor.rgb * 2.4, 0.3) * mix(vec3(1.0), vec3(0.72, 0.95, 0.62), flatness);
         } else {
           vec3 rock = triplanar(tRock, vWPos, bw, 0.18);
           vec3 grass = texture2D(tGrass, vWPos.xz * 0.3).rgb;
@@ -232,6 +232,14 @@ function realisticFlowerGeometry(): THREE.BufferGeometry {
 
 export const windUniform = { value: 0 };
 
+/** Grass is bucketed into square chunks so off-screen and distant chunks are skipped entirely. */
+const CHUNK = 16;
+/** Blades shrink smoothly into the ground between FADE_START and GRASS_RANGE (no hard chunk edges). */
+const GRASS_RANGE = REALISTIC ? 105 : 135;
+const FADE_START = GRASS_RANGE - 40;
+/** Chunk visibility reaches past the fade so a chunk is only hidden once its blades have vanished. */
+const CHUNK_RANGE = GRASS_RANGE + CHUNK;
+
 function windMaterial(opts: THREE.MeshLambertMaterialParameters, strength: number): THREE.Material {
   // Realistic mode uses PBR so grass picks up the sky's image-based light (Lambert ignores it and goes murky).
   const m = REALISTIC ? new THREE.MeshStandardMaterial({ ...opts, roughness: 0.9, metalness: 0 }) : new THREE.MeshLambertMaterial(opts);
@@ -243,11 +251,14 @@ function windMaterial(opts: THREE.MeshLambertMaterialParameters, strength: numbe
         '#include <begin_vertex>',
         `#include <begin_vertex>
         vec4 wpos = modelMatrix * instanceMatrix * vec4(position, 1.0);
-        float sway = position.y * position.y * ${strength.toFixed(2)};
+        float gfade = 1.0 - smoothstep(${FADE_START.toFixed(1)}, ${GRASS_RANGE.toFixed(1)}, distance(wpos.xz, cameraPosition.xz));
+        transformed *= vec3(mix(0.4, 1.0, gfade), gfade, mix(0.4, 1.0, gfade));
+        float sway = transformed.y * transformed.y * ${strength.toFixed(2)};
         transformed.x += sin(uTime * 1.8 + wpos.x * 0.35 + wpos.z * 0.15) * sway;
         transformed.z += cos(uTime * 1.3 + wpos.z * 0.3) * sway * 0.6;`,
       );
   };
+  m.customProgramCacheKey = () => `wind-${strength}-${REALISTIC}`;
   return m;
 }
 
@@ -255,11 +266,6 @@ const grassMaterial = windMaterial({ vertexColors: true, side: THREE.DoubleSide 
 const flowerMaterial = windMaterial({}, 0.4);
 
 const FLOWER_COLORS = ['#ffffff', '#ffe066', '#ff8fc7', '#c39bff', '#ff7b54'];
-
-/** Grass is bucketed into square chunks so off-screen and distant chunks are skipped entirely. */
-const CHUNK = 16;
-/** Chunks whose centre is farther than this are hidden (fog hides the cut-off). */
-const GRASS_RANGE = REALISTIC ? 110 : 140;
 const dryTint = new THREE.Color('#b8a65a');
 
 export function Grass() {
@@ -274,16 +280,30 @@ export function Grass() {
     const up = new THREE.Vector3(0, 1, 0);
     for (const isl of ISLANDS) {
       const pal = BIOMES[isl.biome];
-      // Realistic mode: ~7x denser field of thin blades.
-      const count = Math.floor(Math.PI * isl.radius * isl.radius * isl.grassDensity * (REALISTIC ? 7 : 1));
       // Living grass is a fairly saturated green; skip most of natural()'s muting for the blades.
-      const ga = REALISTIC ? new THREE.Color(pal.grass[0]).offsetHSL(0.01, -0.12, -0.12) : natural(new THREE.Color(pal.grass[0]));
-      const gb = REALISTIC ? new THREE.Color(pal.grass[1]).offsetHSL(-0.02, -0.1, -0.1) : natural(new THREE.Color(pal.grass[1]));
-      for (let i = 0; i < count; i++) {
-        const p = randomSpot(isl, rng, 0.9);
+      // Deeper greens: the strong realistic sun otherwise bleaches the blades pale yellow.
+      const ga = REALISTIC ? new THREE.Color(pal.grass[0]).offsetHSL(0.02, -0.08, -0.22) : natural(new THREE.Color(pal.grass[0]));
+      const gb = REALISTIC ? new THREE.Color(pal.grass[1]).offsetHSL(0.0, -0.08, -0.2) : natural(new THREE.Color(pal.grass[1]));
+      // Jittered grid (not pure random) gives an even carpet with no bald patches or clumps.
+      // Realistic mode is ~7x denser.
+      const perM2 = isl.grassDensity * (REALISTIC ? 7 : 1);
+      const step = 1 / Math.sqrt(perM2);
+      const R = isl.radius * 1.2;
+      const spots: { x: number; z: number; t: number }[] = [];
+      for (let gx = isl.cx - R; gx < isl.cx + R; gx += step) {
+        for (let gz = isl.cz - R; gz < isl.cz + R; gz += step) {
+          const x = gx + (rng() - 0.5) * step;
+          const z = gz + (rng() - 0.5) * step;
+          const t = edgeT(isl, x, z);
+          if (t < 0.99) spots.push({ x, z, t });
+        }
+      }
+      for (const p of spots) {
         const y = islandHeight(isl, p.x, p.z);
-        if (y === null || edgeT(isl, p.x, p.z) > 0.9) continue;
-        const s = REALISTIC ? 0.75 + rng() * 0.6 : 0.55 + rng() * 0.5;
+        if (y === null) continue;
+        // Shorter towards the rim so the edge reads as a natural lip, not a bald ring.
+        const rim = 1 - smoothstep(0.88, 0.99, p.t) * 0.4;
+        const s = (REALISTIC ? 0.75 + rng() * 0.6 : 0.55 + rng() * 0.5) * rim;
         q.setFromAxisAngle(up, rng() * Math.PI * 2);
         const key = `${Math.floor(p.x / CHUNK)},${Math.floor(p.z / CHUNK)}`;
         let b = buckets.get(key);
@@ -291,7 +311,7 @@ export function Grass() {
         b.m.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, y - 0.05, p.z), q, new THREE.Vector3(s, s, s)));
         const col = ga.clone().lerp(gb, rng());
         // Realistic meadows have natural lush and sun-dried patches.
-        if (REALISTIC) col.lerp(dryTint, Math.max(0, fbm(p.x * 0.045 + 31, p.z * 0.045 - 17, 3)) * 0.7);
+        if (REALISTIC) col.lerp(dryTint, Math.max(0, fbm(p.x * 0.045 + 31, p.z * 0.045 - 17, 3)) * 0.45);
         b.c.push(col);
         if (pal.flowers && rng() < 0.06) {
           fm.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x + 0.15, y - 0.05, p.z), q, new THREE.Vector3(1, 0.8 + rng() * 0.5, 1)));
@@ -320,7 +340,7 @@ export function Grass() {
     for (const c of chunks) {
       const dx = c.center.x - p.x;
       const dz = c.center.z - p.z;
-      c.mesh.visible = dx * dx + dz * dz < GRASS_RANGE * GRASS_RANGE;
+      c.mesh.visible = dx * dx + dz * dz < CHUNK_RANGE * CHUNK_RANGE;
     }
   });
 

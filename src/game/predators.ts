@@ -41,11 +41,12 @@ export const PREDATOR_INFO: Record<
   PredatorKind,
   { name: string; hp: number; speed: number; chase: number; reach: number; damage: number; cooldown: number; radius: number; armor: number }
 > = {
-  duskwolf: { name: 'Duskwolf', hp: 4, speed: 1.6, chase: 5.6, reach: 1.5, damage: 9, cooldown: 1.6, radius: 0.45, armor: 0 },
-  shardback: { name: 'Shardback', hp: 12, speed: 0.8, chase: 1.7, reach: 2.1, damage: 15, cooldown: 2.6, radius: 0.9, armor: 1 },
+  // Tuned so a walking player (5.2 m/s) can outpace a wolf, and nothing two-shots you.
+  duskwolf: { name: 'Duskwolf', hp: 3, speed: 1.4, chase: 4.3, reach: 1.4, damage: 5, cooldown: 2.4, radius: 0.45, armor: 0 },
+  shardback: { name: 'Shardback', hp: 8, speed: 0.7, chase: 1.4, reach: 2.0, damage: 9, cooldown: 3.4, radius: 0.9, armor: 1 },
 };
 
-const MAX = { duskwolf: 4, shardback: 2 };
+const MAX = { duskwolf: 2, shardback: 1 };
 
 export const PREDATORS: Predator[] = Array.from({ length: MAX.duskwolf + MAX.shardback }, (_, id) => ({
   id,
@@ -67,7 +68,8 @@ export const PREDATORS: Predator[] = Array.from({ length: MAX.duskwolf + MAX.sha
   kz: 0,
 }));
 
-const timers = { duskwolf: 20, shardback: 35 };
+/** Seconds of night before the first spawn (a grace period after dusk). */
+const timers = { duskwolf: 45, shardback: 80 };
 
 function spawn(p: Predator, x: number, z: number) {
   const t = terrainAt(x, z);
@@ -103,13 +105,13 @@ function trySpawns(dt: number, player: Vector3) {
   timers.duskwolf -= dt;
   timers.shardback -= dt;
   if (timers.duskwolf <= 0) {
-    timers.duskwolf = 28 + Math.random() * 18;
+    timers.duskwolf = 50 + Math.random() * 30;
     const free = PREDATORS.filter((p) => p.kind === 'duskwolf' && !p.alive).slice(0, 2);
     const at = free.length ? spotNear(player, 16, 30) : null;
     if (at) free.forEach((p, i) => spawn(p, at.x + i * 1.4, at.z + i * 0.9));
   }
   if (timers.shardback <= 0) {
-    timers.shardback = 40 + Math.random() * 25;
+    timers.shardback = 80 + Math.random() * 40;
     const free = PREDATORS.find((p) => p.kind === 'shardback' && !p.alive);
     if (!free) return;
     // Shardbacks claw their way out next to ore rocks on the player's island.
