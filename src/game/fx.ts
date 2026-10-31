@@ -53,6 +53,9 @@ export const ghost: { placement: Placement | null; valid: boolean } = { placemen
 /** node/piece id → performance.now() of the last hit, used for wobble animations. */
 export const hitTimes = new Map<string, number>();
 
+/** Dev switches used by scripts/shot.mjs (e.g. freeze hostiles in place for a screenshot lineup). */
+export const debug = { freezeHostiles: false };
+
 /** Hits taken so far by nodes and pieces (not persisted; resets on reload). */
 export const damage = new Map<string, number>();
 

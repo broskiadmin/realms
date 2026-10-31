@@ -4,7 +4,7 @@ import { MP_WORLD } from './mode';
 
 export type ItemId =
   | 'wood' | 'stone' | 'coal' | 'copper' | 'sunstone' | 'skyglass'
-  | 'meat' | 'leather' | 'feather' | 'egg' | 'duskshard' | 'stew' | 'coin';
+  | 'meat' | 'leather' | 'feather' | 'egg' | 'duskshard' | 'stew' | 'coin' | 'fang';
 
 export const ITEMS: Record<ItemId, { name: string; color: string }> = {
   wood: { name: 'Wood', color: '#c98b4a' },
@@ -20,6 +20,7 @@ export const ITEMS: Record<ItemId, { name: string; color: string }> = {
   duskshard: { name: 'Duskshard', color: '#b48cff' },
   stew: { name: 'Hearty Stew', color: '#d9823b' },
   coin: { name: 'Coins', color: '#ffcf33' },
+  fang: { name: 'Duskwolf Fang', color: '#efe6d2' },
 };
 
 export interface Quest {
@@ -219,7 +220,7 @@ interface GameState {
 
 const START_INVENTORY: Record<ItemId, number> = {
   wood: 30, stone: 0, coal: 0, copper: 0, sunstone: 0, skyglass: 0,
-  meat: 0, leather: 0, feather: 0, egg: 0, duskshard: 0, stew: 0, coin: 0,
+  meat: 0, leather: 0, feather: 0, egg: 0, duskshard: 0, stew: 0, coin: 0, fang: 0,
 };
 
 let toastSeq = 1;

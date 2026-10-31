@@ -124,6 +124,30 @@ export function resolveHorizontal(pos: Vector3, feetY: number) {
   }
 }
 
+/**
+ * Push a ground creature (circle of radius r, `height` tall, feet at feetY) out of build pieces.
+ * Returns the id of a piece it pressed against, so hostiles can gnaw through what blocks them.
+ */
+export function pushOutCircle(pos: { x: number; z: number }, r: number, feetY: number, height: number): string | null {
+  refresh();
+  let blocker: string | null = null;
+  const head = feetY + height;
+  for (const b of boxes) {
+    if (b.maxY - feetY <= STEP || head <= b.minY) continue;
+    const cx = Math.max(b.minX, Math.min(pos.x, b.maxX));
+    const cz = Math.max(b.minZ, Math.min(pos.z, b.maxZ));
+    const dx = pos.x - cx;
+    const dz = pos.z - cz;
+    const d2 = dx * dx + dz * dz;
+    if (d2 >= r * r || d2 < 1e-8) continue;
+    const d = Math.sqrt(d2);
+    pos.x = cx + (dx / d) * r;
+    pos.z = cz + (dz / d) * r;
+    blocker = b.id ?? blocker;
+  }
+  return blocker;
+}
+
 /** If moving up from oldHead to newHead hits the underside of a box, return that underside. */
 export function ceilingHit(x: number, z: number, oldHead: number, newHead: number): number | null {
   refresh();

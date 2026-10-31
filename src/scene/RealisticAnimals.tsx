@@ -16,11 +16,11 @@ import { ellipsoid, mirrorX, polygonize, roundCone, unionAll, type SDF } from '.
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 type P3 = [number, number, number];
 
-function sculpt(parts: SDF[], k: number, min: THREE.Vector3, max: THREE.Vector3, res: number) {
+export function sculpt(parts: SDF[], k: number, min: THREE.Vector3, max: THREE.Vector3, res: number) {
   return polygonize(unionAll(parts, k), min, max, res);
 }
 
-function lowerLeg(len: number, r0: number, r1: number): THREE.BufferGeometry {
+export function lowerLeg(len: number, r0: number, r1: number): THREE.BufferGeometry {
   return sculpt(
     [
       roundCone([0, 0.02, 0], [0, -len * 0.62, 0], r0, r1),
@@ -201,7 +201,22 @@ const PATTERNS = {
 
 type PatternName = keyof typeof PATTERNS;
 
-function furMaterial(pattern: PatternName, seed: number, opts: { roughness?: number; sheen?: number; sheenColor?: string } = {}) {
+function furMaterial(pattern: PatternName, seed: number, opts: PatternOpts = {}) {
+  return patternMaterial(`fur-${pattern}`, PATTERNS[pattern], seed, opts);
+}
+
+export interface PatternOpts {
+  roughness?: number;
+  sheen?: number;
+  sheenColor?: string;
+}
+
+/**
+ * Physical material whose colour is painted in object space by a GLSL snippet
+ * (has `vObj`, `uSeed` and `snoise()`; writes `diffuseColor.rgb`). `key` must be
+ * unique per snippet so three compiles a distinct program for it.
+ */
+export function patternMaterial(key: string, glsl: string, seed: number, opts: PatternOpts = {}) {
   const m = new THREE.MeshPhysicalMaterial({
     color: '#ffffff',
     roughness: opts.roughness ?? 0.85,
@@ -219,14 +234,14 @@ function furMaterial(pattern: PatternName, seed: number, opts: { roughness?: num
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\nvarying vec3 vObj;\nuniform float uSeed;\n${NOISE_GLSL}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>\n${PATTERNS[pattern]}`);
+      .replace('#include <color_fragment>', `#include <color_fragment>\n${glsl}`);
   };
   // Distinct program per pattern (onBeforeCompile bodies differ only in the injected string).
-  m.customProgramCacheKey = () => `fur-${pattern}`;
+  m.customProgramCacheKey = () => key;
   return m;
 }
 
-function plain(color: string, roughness: number, extra: Partial<THREE.MeshPhysicalMaterialParameters> = {}) {
+export function plain(color: string, roughness: number, extra: Partial<THREE.MeshPhysicalMaterialParameters> = {}) {
   return new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, emissive: '#ff2a2a', emissiveIntensity: 0, ...extra });
 }
 

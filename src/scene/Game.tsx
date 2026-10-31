@@ -10,6 +10,7 @@ import { tickTrader } from '../game/npcs';
 import { Benches } from './Benches';
 import { Npcs, TraderCart } from './Npcs';
 import { Wisps } from './Wisps';
+import { Predators } from './Predators';
 import { Clouds, Lights, Sky, SKY_HORIZON, SUN_DIR } from './Environment';
 import { loadPhotoTextures } from './photoTextures';
 import { Interaction } from './Interaction';
@@ -135,6 +136,7 @@ export function Game({ quality }: { quality: Quality }) {
         <Pieces />
         <Mobs />
         <Wisps />
+        <Predators />
         <Benches />
         <Npcs />
         <TraderCart />

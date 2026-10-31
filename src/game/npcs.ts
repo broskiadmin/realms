@@ -111,13 +111,13 @@ export function makeQuest(npcId: string): Quest {
 
 export function questText(q: Quest): string {
   if (q.kind === 'deliver') return `Bring me ${q.count} ${ITEMS[q.item ?? 'wood'].name}.`;
-  if (q.kind === 'slay') return `Defeat ${q.count} Gloomwisps at night.`;
+  if (q.kind === 'slay') return `Defeat ${q.count} night creatures (Gloomwisps, Duskwolves or Shardbacks).`;
   return `Travel to ${ISLANDS[q.island ?? 0].name} and come back.`;
 }
 
 export function questShort(q: Quest): string {
   if (q.kind === 'deliver') return `${q.count} ${ITEMS[q.item ?? 'wood'].name}`;
-  if (q.kind === 'slay') return `Slay ${q.count} Gloomwisps`;
+  if (q.kind === 'slay') return `Slay ${q.count} night creatures`;
   return `Visit ${ISLANDS[q.island ?? 0].name}`;
 }
 
@@ -191,6 +191,7 @@ export const SELL_LIST: { item: ItemId; qty: number; price: number }[] = [
   { item: 'feather', qty: 3, price: 2 },
   { item: 'egg', qty: 2, price: 2 },
   { item: 'meat', qty: 2, price: 3 },
+  { item: 'fang', qty: 1, price: 4 },
 ];
 
 const STAY = 240;

@@ -37,6 +37,32 @@ await page.evaluate(
 await page.reload();
 await page.waitForTimeout(Number(wait));
 await page.evaluate(() => document.querySelector('.menu')?.classList.add('menu--hidden'));
+if (extra === 'hostiles') {
+  // Freeze AI and park a Duskwolf, a Shardback and a winding-up Gloomwisp in front of the camera.
+  await page.evaluate(() => {
+    const r = window.__realms;
+    r.debug.freezeHostiles = true;
+    const p = r.player.pos;
+    const yaw = r.player.yaw;
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    const place = (o, side, dist) => {
+      o.x = p.x + fx * dist - fz * side;
+      o.z = p.z + fz * dist + fx * side;
+    };
+    const wolf = r.PREDATORS.find((q) => q.kind === 'duskwolf');
+    const shard = r.PREDATORS.find((q) => q.kind === 'shardback');
+    for (const [o, side, dist] of [[wolf, -1.8, 4], [shard, 1.6, 5.5]]) {
+      Object.assign(o, { alive: true, presence: 1, state: 'chase', hp: 4, strike: -1, y: p.y });
+      place(o, side, dist);
+      o.heading = yaw + Math.PI * 0.75;
+    }
+    const w = r.WISPS[0];
+    Object.assign(w, { alive: true, fading: 0, charge: 0.7, hp: 3 });
+    w.pos.set(p.x + fx * 3.2 + fz * 0.2, p.y + 1.9, p.z + fz * 3.2 - fx * 0.2);
+  });
+  await page.waitForTimeout(2500);
+}
 if (extra === 'lineup') {
   await page.evaluate(() => {
     const r = window.__realms;

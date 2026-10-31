@@ -7,6 +7,7 @@ import { openCrafting } from '../ui/Crafting';
 import { openDialog } from '../ui/Dialog';
 import { hitWisp, WISP_HP, WISPS } from '../game/hostiles';
 import { hitMob, MOB_INFO, MOBS } from '../game/mobs';
+import { hitPredator, PREDATOR_INFO, PREDATORS } from '../game/predators';
 import { computePlacement } from '../game/pieces';
 import { ITEMS, MAT_INFO, pieceKey, useGame, type ItemId, type TargetInfo } from '../game/store';
 import { BIOMES, ISLANDS, NODE_BY_ID, NODE_HP, ORE_INFO, RESPAWN_MS, nodeName, type ResourceNode } from '../game/world';
@@ -17,7 +18,7 @@ const SWING_COOLDOWN = 0.36;
 const PIECE_HP = 3;
 
 interface Hit {
-  kind: 'node' | 'mob' | 'wisp' | 'piece' | 'bench' | 'npc' | 'trader' | 'island';
+  kind: 'node' | 'mob' | 'wisp' | 'predator' | 'piece' | 'bench' | 'npc' | 'trader' | 'island';
   id: string | number;
   point: THREE.Vector3;
   distance: number;
@@ -124,6 +125,7 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
       const { kind, id } = tagged.userData as { kind: Hit['kind']; id: string | number };
       if (kind === 'mob' && MOBS[id as number]?.dead) continue;
       if (kind === 'wisp' && !WISPS[id as number]?.alive) continue;
+      if (kind === 'predator' && !PREDATORS[id as number]?.alive) continue;
       hit = { kind, id, point: i.point, distance: i.distance };
       break;
     }
@@ -186,6 +188,11 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
       const w = WISPS[h.id as number];
       return { key: `w${w.id}`, label: 'Gloomwisp', hp: w.hp, max: WISP_HP };
     }
+    if (h.kind === 'predator') {
+      const p = PREDATORS[h.id as number];
+      const info = PREDATOR_INFO[p.kind];
+      return { key: `pr${p.id}`, label: info.name, hp: Math.ceil(p.hp), max: info.hp };
+    }
     if (h.kind === 'piece') {
       const p = useGame.getState().pieces.find((q) => q.id === h.id);
       if (!p) return null;
@@ -235,6 +242,14 @@ export function Interaction({ world }: { world: RefObject<THREE.Group> }) {
     } else if (h.kind === 'wisp') {
       const drops = hitWisp(WISPS[h.id as number], player.pos, power);
       burst(h.point, '#b48cff', drops ? 26 : 8, drops ? 1.8 : 1);
+      if (drops) {
+        g.addItems(drops);
+        g.addWispKill();
+      }
+    } else if (h.kind === 'predator') {
+      const p = PREDATORS[h.id as number];
+      const drops = hitPredator(p, player.pos, power);
+      burst(h.point, p.kind === 'duskwolf' ? '#3a3a44' : '#4ff0ff', drops ? 28 : 8, drops ? 1.8 : 1);
       if (drops) {
         g.addItems(drops);
         g.addWispKill();
