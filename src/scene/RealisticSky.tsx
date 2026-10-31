@@ -11,11 +11,19 @@ import { SUN_DIR } from './Environment';
 const ENV_REFRESH = 4;
 /** Shared brightness scale for the analytic sky (see makeSky). */
 const SKY_GAIN = { value: 0.5 };
+/**
+ * The analytic sky goes black at night, so it fades out (alpha = daylight) to reveal the
+ * stylised night gradient with moon and stars drawn beneath it by <Sky />.
+ */
+const SKY_ALPHA = { value: 1 };
 
 function makeSky(): SkyImpl {
   const s = new SkyImpl();
   s.scale.setScalar(1000);
   s.frustumCulled = false;
+  s.renderOrder = -1;
+  s.material.transparent = true;
+  s.material.uniforms.uSkyAlpha = SKY_ALPHA;
   const u = s.material.uniforms;
   // Clear-day atmosphere: low turbidity/Mie haze, stronger Rayleigh for a deeper blue.
   u.turbidity.value = 2.0;
@@ -27,8 +35,8 @@ function makeSky(): SkyImpl {
   const mat = s.material;
   mat.uniforms.uSkyGain = SKY_GAIN;
   mat.fragmentShader = mat.fragmentShader
-    .replace('void main() {', 'uniform float uSkyGain;\nvoid main() {')
-    .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * uSkyGain, 1.0 );');
+    .replace('void main() {', 'uniform float uSkyGain;\nuniform float uSkyAlpha;\nvoid main() {')
+    .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * uSkyGain, uSkyAlpha );');
   return s;
 }
 
@@ -85,10 +93,11 @@ export function RealisticSky() {
     sky.position.copy(state.camera.position);
     (sky.material.uniforms.sunPosition.value as THREE.Vector3).copy(SUN_DIR);
     if (stars.current) stars.current.visible = SUN_DIR.y < -0.02;
+    SKY_ALPHA.value = THREE.MathUtils.smoothstep(SUN_DIR.y, -0.14, 0.06);
     if (hdri.current) {
-      // Daylight from the captured sky, fading to almost nothing at night.
+      // Daylight from the captured sky; at night a dim floor keeps shapes readable under the moon.
       scene.environment = hdri.current.texture;
-      scene.environmentIntensity = THREE.MathUtils.clamp(SUN_DIR.y * 2.2 + 0.2, 0.04, 1);
+      scene.environmentIntensity = THREE.MathUtils.clamp(SUN_DIR.y * 2.2 + 0.2, 0.22, 1);
       return;
     }
     timer.current += dt;
@@ -147,10 +156,19 @@ const CLOUD_BANKS = (() => {
 
 /** Lit volumetric cloud banks around the islands plus a thick cloud sea far below. */
 export function RealisticClouds() {
+  // Unlit clouds would glow white all night: scale their brightness with daylight instead.
+  const group = useRef<THREE.Group>(null);
+  useFrame(() => {
+    const day = THREE.MathUtils.smoothstep(SUN_DIR.y, -0.12, 0.18);
+    group.current?.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+      if (m?.color) m.color.setScalar(0.16 + 0.84 * day);
+    });
+  });
   return (
     <Suspense fallback={null}>
       {/* Unlit: Lambert-lit billboards picked up the brown hemisphere ground colour and looked muddy. */}
-      <Clouds texture={cloudSprite} material={THREE.MeshBasicMaterial} limit={560} frustumCulled={false}>
+      <Clouds ref={group} texture={cloudSprite} material={THREE.MeshBasicMaterial} limit={560} frustumCulled={false}>
         {CLOUD_BANKS.map((c) => (
           <Cloud
             key={c.seed}

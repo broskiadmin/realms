@@ -72,7 +72,7 @@ export function Sky() {
 export const cloudMaterial = surface({ color: '#ffffff', emissive: '#b8d4f0', emissiveIntensity: 0.35 });
 
 /** Realistic-mode haze colours (fog + background) — the atmospheric sky itself is drawn by RealisticSky. */
-const REAL_HAZE = { day: new THREE.Color('#9dbbdc'), night: new THREE.Color('#070b16'), sunset: new THREE.Color('#d99a6c') };
+const REAL_HAZE = { day: new THREE.Color('#9dbbdc'), night: new THREE.Color('#1a2648'), sunset: new THREE.Color('#d99a6c') };
 
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -110,9 +110,10 @@ export function Lights() {
     const light = day > 0.02 ? SUN_DIR : SUN_DIR.clone().negate();
     if (REALISTIC) {
       // Strong key light + dim sky fill; image-based lighting from RealisticSky does the rest.
-      l.intensity = day > 0.02 ? 4.2 * day : 0.35;
-      l.color.set(day > 0.02 ? '#fff1de' : '#8ea6e0').lerp(REAL_HAZE.sunset, glow);
-      hl.intensity = 0.12 + 0.65 * day;
+      // Night: a strong cool moonlight + bluish sky fill so you can see (exposure also adapts upward).
+      l.intensity = day > 0.02 ? 4.2 * day : 1.4;
+      l.color.set(day > 0.02 ? '#fff1de' : '#9db4ff').lerp(REAL_HAZE.sunset, glow);
+      hl.intensity = 0.5 + 0.27 * day;
     } else {
       l.intensity = day > 0.02 ? 2.4 * day : 0.55;
       l.color.set(day > 0.02 ? '#fff3dc' : '#9fb4ff').lerp(SUNSET, glow * 0.6);

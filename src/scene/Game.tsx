@@ -74,7 +74,11 @@ function RealisticEffects() {
   // Light source for the god-ray pass: a disc far along the sun direction (hidden at night).
   const [sun, setSun] = useState<THREE.Mesh | null>(null);
   const ndc = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
+  useFrame((_, dt) => {
+    // Eye adaptation: exposure eases up at night (and back down at dawn) so darkness stays readable.
+    const day = THREE.MathUtils.smoothstep(SUN_DIR.y, -0.12, 0.18);
+    const u = exposure.uniforms.get('exposure')!;
+    u.value += (THREE.MathUtils.lerp(1.08, 0.62, day) - u.value) * Math.min(1, dt * 0.8);
     if (!sun) return;
     sun.position.copy(camera.position).addScaledVector(SUN_DIR, 900);
     // Only feed the god-ray pass when the sun is on (or just off) screen. With the sun out of view
@@ -129,7 +133,9 @@ export function Game({ quality }: { quality: Quality }) {
       <color attach="background" args={[SKY_HORIZON]} />
       {/* Realistic: a clear day — light aerial haze far out instead of milky fog. */}
       <fog attach="fog" args={[SKY_HORIZON, realistic ? 240 : 70, realistic ? 1150 : 300]} />
-      {realistic ? <RealisticSky /> : <Sky />}
+      {/* Stylised sky always draws (it's the moonlit night sky under the realistic one, which fades at night). */}
+      <Sky />
+      {realistic && <RealisticSky />}
       <Lights />
       <group ref={world}>
         <Islands />
