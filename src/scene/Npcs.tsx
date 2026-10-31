@@ -165,7 +165,7 @@ function Villager({ id }: { id: string }) {
     const t = state.clock.elapsedTime;
     const b = body.current;
     // Distance cull (villagers are ~30 parts each); haze hides the cut-off.
-    const far = (spot.x - player.pos.x) ** 2 + (spot.z - player.pos.z) ** 2 > 90 * 90;
+    const far = (spot.x - player.pos.x) ** 2 + (spot.z - player.pos.z) ** 2 > 140 * 140;
     if (root.current) root.current.visible = !far;
     if (far) return;
     if (b) {

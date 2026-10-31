@@ -252,7 +252,7 @@ function MobView({ mob }: { mob: Mob }) {
     // Skip far-away animals entirely (each is 15–30 parts, drawn twice with shadows); haze hides the cut.
     const dx = mob.x - player.pos.x;
     const dz = mob.z - player.pos.z;
-    g.visible = !mob.dead && dx * dx + dz * dz < 90 * 90;
+    g.visible = !mob.dead && dx * dx + dz * dz < 140 * 140;
     if (!g.visible) return;
     g.position.set(mob.x, mob.y + mob.hop, mob.z);
     g.rotation.y = mob.heading;

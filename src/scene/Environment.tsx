@@ -72,7 +72,7 @@ export function Sky() {
 export const cloudMaterial = surface({ color: '#ffffff', emissive: '#b8d4f0', emissiveIntensity: 0.35 });
 
 /** Realistic-mode haze colours (fog + background) — the atmospheric sky itself is drawn by RealisticSky. */
-const REAL_HAZE = { day: new THREE.Color('#b4c8d8'), night: new THREE.Color('#070b16'), sunset: new THREE.Color('#d99a6c') };
+const REAL_HAZE = { day: new THREE.Color('#9dbbdc'), night: new THREE.Color('#070b16'), sunset: new THREE.Color('#d99a6c') };
 
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);

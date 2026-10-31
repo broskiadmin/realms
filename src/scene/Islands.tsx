@@ -259,7 +259,7 @@ const FLOWER_COLORS = ['#ffffff', '#ffe066', '#ff8fc7', '#c39bff', '#ff7b54'];
 /** Grass is bucketed into square chunks so off-screen and distant chunks are skipped entirely. */
 const CHUNK = 16;
 /** Chunks whose centre is farther than this are hidden (fog hides the cut-off). */
-const GRASS_RANGE = REALISTIC ? 80 : 140;
+const GRASS_RANGE = REALISTIC ? 110 : 140;
 const dryTint = new THREE.Color('#b8a65a');
 
 export function Grass() {

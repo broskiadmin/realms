@@ -71,10 +71,15 @@ function RealisticEffects() {
   const camera = useThree((s) => s.camera);
   // Light source for the god-ray pass: a disc far along the sun direction (hidden at night).
   const [sun, setSun] = useState<THREE.Mesh | null>(null);
+  const ndc = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
     if (!sun) return;
     sun.position.copy(camera.position).addScaledVector(SUN_DIR, 900);
-    sun.visible = SUN_DIR.y > -0.05;
+    // Only feed the god-ray pass when the sun is on (or just off) screen. With the sun out of view
+    // the radial blur smears glare over the whole frame and reads as thick milky fog.
+    ndc.copy(sun.position).project(camera);
+    const onScreen = ndc.z < 1 && Math.abs(ndc.x) < 1.25 && Math.abs(ndc.y) < 1.25;
+    sun.visible = SUN_DIR.y > -0.05 && onScreen;
   });
   return (
     <>
@@ -85,8 +90,8 @@ function RealisticEffects() {
       <EffectComposer multisampling={0}>
         {/* Half-res AO + 60-sample rays: roughly a third of the cost, nearly identical at play distance. */}
         <N8AO aoRadius={2.4} distanceFalloff={1.2} intensity={2.6} quality="high" halfRes />
-        {sun ? <GodRays sun={sun} samples={60} density={0.97} decay={0.94} weight={0.32} exposure={0.42} clampMax={1} blur /> : <></>}
-        <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.3} intensity={0.45} />
+        {sun ? <GodRays sun={sun} samples={60} density={0.96} decay={0.93} weight={0.2} exposure={0.34} clampMax={1} blur /> : <></>}
+        <Bloom mipmapBlur luminanceThreshold={1.3} luminanceSmoothing={0.3} intensity={0.3} />
         <primitive object={exposure} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         <SMAA />
@@ -120,7 +125,8 @@ export function Game({ quality }: { quality: Quality }) {
         />
       )}
       <color attach="background" args={[SKY_HORIZON]} />
-      <fog attach="fog" args={[SKY_HORIZON, realistic ? 110 : 70, realistic ? 480 : 300]} />
+      {/* Realistic: a clear day — light aerial haze far out instead of milky fog. */}
+      <fog attach="fog" args={[SKY_HORIZON, realistic ? 240 : 70, realistic ? 1150 : 300]} />
       {realistic ? <RealisticSky /> : <Sky />}
       <Lights />
       <group ref={world}>

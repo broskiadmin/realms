@@ -9,16 +9,26 @@ import { SUN_DIR } from './Environment';
 
 /** Seconds between image-based-lighting refreshes as the sun moves. */
 const ENV_REFRESH = 4;
+/** Shared brightness scale for the analytic sky (see makeSky). */
+const SKY_GAIN = { value: 0.5 };
 
 function makeSky(): SkyImpl {
   const s = new SkyImpl();
   s.scale.setScalar(1000);
   s.frustumCulled = false;
   const u = s.material.uniforms;
-  u.turbidity.value = 4.5;
-  u.rayleigh.value = 1.4;
-  u.mieCoefficient.value = 0.004;
-  u.mieDirectionalG.value = 0.82;
+  // Clear-day atmosphere: low turbidity/Mie haze, stronger Rayleigh for a deeper blue.
+  u.turbidity.value = 2.0;
+  u.rayleigh.value = 2.4;
+  u.mieCoefficient.value = 0.0025;
+  u.mieDirectionalG.value = 0.8;
+  // The analytic sky is far brighter than the lit scene; after exposure it clipped to white
+  // (reading as fog, and making white clouds look grey against it). Give it its own gain.
+  const mat = s.material;
+  mat.uniforms.uSkyGain = SKY_GAIN;
+  mat.fragmentShader = mat.fragmentShader
+    .replace('void main() {', 'uniform float uSkyGain;\nvoid main() {')
+    .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * uSkyGain, 1.0 );');
   return s;
 }
 
@@ -122,15 +132,16 @@ const cloudSprite = (() => {
 })();
 
 // HDR "brighter than white": the exposure pass scales the frame by ~0.6, so unlit clouds need >1 to read as white.
-const CLOUD_WHITE = new THREE.Color('#ffffff').multiplyScalar(1.7);
-const CLOUD_SEA = new THREE.Color('#eef3f8').multiplyScalar(1.6);
+const CLOUD_WHITE = new THREE.Color('#ffffff').multiplyScalar(1.35);
+const CLOUD_SEA = new THREE.Color('#e4ecf4').multiplyScalar(1.1);
 
 const CLOUD_BANKS = (() => {
   const rnd = mulberry32(4242);
-  return Array.from({ length: 14 }, (_, i) => {
+  // Few, well-separated banks: stacked translucent banks read as a white fog wall.
+  return Array.from({ length: 9 }, (_, i) => {
     const a = rnd() * Math.PI * 2;
-    const r = 90 + rnd() * 160;
-    return { seed: i + 1, pos: [Math.cos(a) * r, 18 + rnd() * 40, Math.sin(a) * r] as [number, number, number], size: 18 + rnd() * 22 };
+    const r = 140 + rnd() * 200;
+    return { seed: i + 1, pos: [Math.cos(a) * r, 35 + rnd() * 45, Math.sin(a) * r] as [number, number, number], size: 18 + rnd() * 18 };
   });
 })();
 
@@ -147,12 +158,12 @@ export function RealisticClouds() {
             position={c.pos}
             bounds={[c.size, c.size * 0.25, c.size * 0.6]}
             segments={28}
-            volume={c.size * 1.1}
+            volume={c.size * 0.85}
             smallestVolume={0.3}
             growth={4}
             speed={0.04}
             fade={150}
-            opacity={1}
+            opacity={0.8}
             color={CLOUD_WHITE}
           />
         ))}
@@ -160,14 +171,14 @@ export function RealisticClouds() {
           <Cloud
             key={`sea${i}`}
             seed={100 + i}
-            position={[(i % 2 ? 1 : -1) * 120, -42, (i < 2 ? 1 : -1) * 120]}
+            position={[(i % 2 ? 1 : -1) * 120, -58, (i < 2 ? 1 : -1) * 120]}
             bounds={[200, 6, 200]}
             segments={70}
             volume={70}
             growth={6}
             speed={0.02}
             fade={300}
-            opacity={0.95}
+            opacity={0.5}
             color={CLOUD_SEA}
           />
         ))}

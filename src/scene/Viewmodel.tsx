@@ -10,6 +10,8 @@ function overlayMat(color: string, glow = 0, metal = false) {
   return surface({
     color,
     depthTest: false,
+    // In the transparent pass (sorted by renderOrder 1000+) so the held tool draws after clouds/particles.
+    transparent: true,
     emissive: glow ? color : '#000000',
     emissiveIntensity: glow,
     roughness: metal ? 0.35 : 0.75,
