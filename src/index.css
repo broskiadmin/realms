@@ -215,6 +215,9 @@ kbd { font-family: inherit; min-width: 54px; text-align: center; padding: 2px 8p
 .nametag { padding: 2px 8px; border-radius: 6px; background: rgba(10, 12, 40, 0.6); color: #fff; font-family: 'Lilita One', system-ui, sans-serif; font-size: 14px; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
 .chat__line--player b { color: #b8ffc6; }
 
+/* F3 frame-rate meter */
+.fps { position: fixed; bottom: 6px; right: 10px; z-index: 6; padding: 3px 9px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); font: 13px ui-monospace, monospace; pointer-events: none; }
+
 /* Crash screen */
 .crash { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(20, 8, 30, 0.85); font-family: 'Lilita One', system-ui, sans-serif; color: #fff; }
 .crash__card { width: min(560px, 92vw); padding: 24px; border-radius: 22px; background: linear-gradient(160deg, #6b2b5e, #3b1d63); text-align: center; box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4); }

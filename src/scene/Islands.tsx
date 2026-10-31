@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { player } from '../game/fx';
 import { fbm, mulberry32, noise2, smoothstep } from '../game/noise';
 import { BIOMES, ISLANDS, edgeT, islandHeight, radiusAt, randomSpot, topAt, type IslandDef } from '../game/world';
 import { surface } from './materials';
@@ -254,13 +256,18 @@ const flowerMaterial = windMaterial({}, 0.4);
 
 const FLOWER_COLORS = ['#ffffff', '#ffe066', '#ff8fc7', '#c39bff', '#ff7b54'];
 
+/** Grass is bucketed into square chunks so off-screen and distant chunks are skipped entirely. */
+const CHUNK = 16;
+/** Chunks whose centre is farther than this are hidden (fog hides the cut-off). */
+const GRASS_RANGE = REALISTIC ? 80 : 140;
+const dryTint = new THREE.Color('#b8a65a');
+
 export function Grass() {
-  const { tufts, flowers } = useMemo(() => {
+  const { chunks, flowers } = useMemo(() => {
     const tuftGeo = REALISTIC ? realisticTuftGeometry() : tuftGeometry();
     const flowerGeo = REALISTIC ? realisticFlowerGeometry() : new THREE.IcosahedronGeometry(0.09, 0).translate(0, 0.4, 0);
     const rng = mulberry32(42);
-    const tm: THREE.Matrix4[] = [];
-    const tc: THREE.Color[] = [];
+    const buckets = new Map<string, { m: THREE.Matrix4[]; c: THREE.Color[] }>();
     const fm: THREE.Matrix4[] = [];
     const fc: THREE.Color[] = [];
     const q = new THREE.Quaternion();
@@ -278,8 +285,14 @@ export function Grass() {
         if (y === null || edgeT(isl, p.x, p.z) > 0.9) continue;
         const s = REALISTIC ? 0.75 + rng() * 0.6 : 0.55 + rng() * 0.5;
         q.setFromAxisAngle(up, rng() * Math.PI * 2);
-        tm.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, y - 0.05, p.z), q, new THREE.Vector3(s, s, s)));
-        tc.push(ga.clone().lerp(gb, rng()));
+        const key = `${Math.floor(p.x / CHUNK)},${Math.floor(p.z / CHUNK)}`;
+        let b = buckets.get(key);
+        if (!b) buckets.set(key, (b = { m: [], c: [] }));
+        b.m.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, y - 0.05, p.z), q, new THREE.Vector3(s, s, s)));
+        const col = ga.clone().lerp(gb, rng());
+        // Realistic meadows have natural lush and sun-dried patches.
+        if (REALISTIC) col.lerp(dryTint, Math.max(0, fbm(p.x * 0.045 + 31, p.z * 0.045 - 17, 3)) * 0.7);
+        b.c.push(col);
         if (pal.flowers && rng() < 0.06) {
           fm.push(new THREE.Matrix4().compose(new THREE.Vector3(p.x + 0.15, y - 0.05, p.z), q, new THREE.Vector3(1, 0.8 + rng() * 0.5, 1)));
           fc.push(natural(new THREE.Color(FLOWER_COLORS[Math.floor(rng() * FLOWER_COLORS.length)])));
@@ -291,17 +304,31 @@ export function Grass() {
       ms.forEach((m, i) => im.setMatrixAt(i, m));
       cs.forEach((c, i) => im.setColorAt(i, c));
       im.instanceMatrix.needsUpdate = true;
-      im.frustumCulled = false;
+      // Bounds over all instances so the renderer can frustum-cull the whole chunk.
+      im.computeBoundingSphere();
       return im;
     };
-    return {
-      tufts: make(tuftGeo, grassMaterial, tm, tc),
-      flowers: make(flowerGeo, flowerMaterial, fm, fc),
-    };
+    const chunks = [...buckets.values()].map((b) => {
+      const mesh = make(tuftGeo, grassMaterial, b.m, b.c);
+      return { mesh, center: mesh.boundingSphere!.center.clone() };
+    });
+    return { chunks, flowers: make(flowerGeo, flowerMaterial, fm, fc) };
   }, []);
+
+  useFrame(() => {
+    const p = player.pos;
+    for (const c of chunks) {
+      const dx = c.center.x - p.x;
+      const dz = c.center.z - p.z;
+      c.mesh.visible = dx * dx + dz * dz < GRASS_RANGE * GRASS_RANGE;
+    }
+  });
+
   return (
     <>
-      <primitive object={tufts} />
+      {chunks.map((c, i) => (
+        <primitive key={i} object={c.mesh} />
+      ))}
       <primitive object={flowers} />
     </>
   );

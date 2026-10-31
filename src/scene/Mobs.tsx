@@ -249,8 +249,11 @@ function MobView({ mob }: { mob: Mob }) {
   useFrame((state, dt) => {
     const g = group.current;
     if (!g) return;
-    g.visible = !mob.dead;
-    if (mob.dead) return;
+    // Skip far-away animals entirely (each is 15–30 parts, drawn twice with shadows); haze hides the cut.
+    const dx = mob.x - player.pos.x;
+    const dz = mob.z - player.pos.z;
+    g.visible = !mob.dead && dx * dx + dz * dz < 90 * 90;
+    if (!g.visible) return;
     g.position.set(mob.x, mob.y + mob.hop, mob.z);
     g.rotation.y = mob.heading;
 

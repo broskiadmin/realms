@@ -139,14 +139,14 @@ export function RealisticClouds() {
   return (
     <Suspense fallback={null}>
       {/* Unlit: Lambert-lit billboards picked up the brown hemisphere ground colour and looked muddy. */}
-      <Clouds texture={cloudSprite} material={THREE.MeshBasicMaterial} limit={900} frustumCulled={false}>
+      <Clouds texture={cloudSprite} material={THREE.MeshBasicMaterial} limit={560} frustumCulled={false}>
         {CLOUD_BANKS.map((c) => (
           <Cloud
             key={c.seed}
             seed={c.seed}
             position={c.pos}
             bounds={[c.size, c.size * 0.25, c.size * 0.6]}
-            segments={40}
+            segments={28}
             volume={c.size * 1.1}
             smallestVolume={0.3}
             growth={4}
@@ -162,7 +162,7 @@ export function RealisticClouds() {
             seed={100 + i}
             position={[(i % 2 ? 1 : -1) * 120, -42, (i < 2 ? 1 : -1) * 120]}
             bounds={[200, 6, 200]}
-            segments={110}
+            segments={70}
             volume={70}
             growth={6}
             speed={0.02}

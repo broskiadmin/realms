@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PointerLockControls, SoftShadows } from '@react-three/drei';
+import { PerformanceMonitor, PointerLockControls, SoftShadows } from '@react-three/drei';
 import { Bloom, EffectComposer, GodRays, N8AO, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { Effect, ToneMappingMode } from 'postprocessing';
 import * as THREE from 'three';
@@ -23,6 +23,21 @@ import { RealisticClouds, RealisticSky } from './RealisticSky';
 import { RemotePlayers } from './RemotePlayers';
 import { Resources } from './Resources';
 import { Viewmodel } from './Viewmodel';
+
+/** Dev-only: expose the renderer so scripts/shot.mjs can report draw calls and triangles. */
+function DevRendererHook() {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    // Count across every pass of a frame (scene, shadows, post-processing), not just the last one.
+    gl.info.autoReset = false;
+    Object.assign((window as unknown as { __realms?: object }).__realms ?? {}, { gl });
+  }, [gl]);
+  useFrame(() => {
+    if (import.meta.env.DEV) gl.info.reset();
+  });
+  return null;
+}
 
 function Ticker() {
   const acc = useRef(0);
@@ -68,8 +83,9 @@ function RealisticEffects() {
         <meshBasicMaterial color="#fff4dc" fog={false} toneMapped={false} />
       </mesh>
       <EffectComposer multisampling={0}>
-        <N8AO aoRadius={2.4} distanceFalloff={1.2} intensity={2.6} quality="ultra" halfRes={false} />
-        {sun ? <GodRays sun={sun} samples={90} density={0.97} decay={0.94} weight={0.32} exposure={0.42} clampMax={1} blur /> : <></>}
+        {/* Half-res AO + 60-sample rays: roughly a third of the cost, nearly identical at play distance. */}
+        <N8AO aoRadius={2.4} distanceFalloff={1.2} intensity={2.6} quality="high" halfRes />
+        {sun ? <GodRays sun={sun} samples={60} density={0.97} decay={0.94} weight={0.32} exposure={0.42} clampMax={1} blur /> : <></>}
         <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.3} intensity={0.45} />
         <primitive object={exposure} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
@@ -85,6 +101,7 @@ export function Game({ quality }: { quality: Quality }) {
   const setLocked = useGame((s) => s.setLocked);
   useEffect(() => () => setLocked(false), [setLocked]);
   const realistic = quality === 'realistic';
+  const setDpr = useThree((s) => s.setDpr);
   useEffect(() => {
     if (realistic) loadPhotoTextures();
   }, [realistic]);
@@ -92,7 +109,16 @@ export function Game({ quality }: { quality: Quality }) {
   return (
     <>
       {/* Contact-hardening soft shadows (PCSS) — patches shaders, so mount before anything compiles. */}
-      {realistic && <SoftShadows size={18} samples={20} focus={0.6} />}
+      {realistic && <SoftShadows size={18} samples={12} focus={0.6} />}
+      {/* Adaptive resolution: drops pixel ratio when the frame rate dips, raises it when there's headroom. */}
+      {quality !== 'low' && (
+        <PerformanceMonitor
+          factor={0.5}
+          flipflops={4}
+          onChange={({ factor }) => setDpr(Math.min(window.devicePixelRatio, 0.75 + factor * (realistic ? 1.25 : 1)))}
+          onFallback={() => setDpr(0.75)}
+        />
+      )}
       <color attach="background" args={[SKY_HORIZON]} />
       <fog attach="fog" args={[SKY_HORIZON, realistic ? 110 : 70, realistic ? 480 : 300]} />
       {realistic ? <RealisticSky /> : <Sky />}
@@ -116,6 +142,7 @@ export function Game({ quality }: { quality: Quality }) {
       <Interaction world={world} />
       <Viewmodel />
       <Ticker />
+      <DevRendererHook />
       {!IS_TOUCH && <PointerLockControls selector="#play-btn" onLock={() => setLocked(true)} onUnlock={() => setLocked(false)} />}
       {realistic && <RealisticEffects />}
       {quality === 'high' && (

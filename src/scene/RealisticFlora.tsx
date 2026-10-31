@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { createNoise3D } from 'simplex-noise';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { mulberry32 } from '../game/noise';
 import { BIOMES, ISLANDS, type ResourceNode } from '../game/world';
 import { windUniform } from './Islands';
@@ -218,15 +219,16 @@ export function RealisticTree({ n, ud }: { n: ResourceNode; ud: Record<string, u
     const tint = pal.foliage.map((f) => new THREE.Color(f).offsetHSL(0, -0.15, -0.05));
     const b = n.variant === 1 ? buildPine(n, tint) : buildBroadleaf(n, tint);
     b.cards.userData = ud;
-    return b;
+    // Bounds over every card so off-screen crowns are frustum-culled (incl. their shadow-pass cost).
+    b.cards.computeBoundingSphere();
+    // Trunk + branches as ONE mesh: 1 draw call per pass instead of ~8.
+    const wood = mergeGeometries([b.trunk, ...b.branches.map((m) => branchGeo.clone().applyMatrix4(m))]) ?? b.trunk;
+    return { wood, cards: b.cards };
   }, [n, pal, ud]);
   const bark = toon(n.variant === 1 ? '#7a4b2a' : '#8b5a2b', 0, barkDetail);
   return (
     <>
-      <mesh geometry={build.trunk} material={bark} castShadow receiveShadow userData={ud} />
-      {build.branches.map((m, i) => (
-        <mesh key={i} geometry={branchGeo} material={bark} matrix={m} matrixAutoUpdate={false} castShadow userData={ud} />
-      ))}
+      <mesh geometry={build.wood} material={bark} castShadow receiveShadow userData={ud} />
       <primitive object={build.cards} />
     </>
   );

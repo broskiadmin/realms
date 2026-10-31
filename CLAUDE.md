@@ -123,7 +123,9 @@ controller.
   `.shots/` and Read them. Realistic-only vegetation lives in `src/scene/RealisticFlora.tsx`.
 - **Vite sometimes misses rapid edits** and serves a stale module (seen 3×). After a batch of edits, confirm
   with `curl -s <url>/src/... | grep -c <new symbol>`; if stale, restart the app. Note edits hot-reload into
-  the player's live game, so a half-finished multi-file change can crash it — finish dependent edits fast.
+  the player's live game, so a half-finished multi-file change can crash it. **Edit order: add imports and
+  new exports FIRST, then the code that uses them** — every intermediate save must be runnable (this has
+  crashed the player's game twice: `mergeGeometries`, `player` not defined).
 - **In-game chat ↔ this steward session.** Messages typed in game (T / Enter, or the Chat button on
   touch) arrive in this tmux pane prefixed `[realms chat]` via fraigent-command's send-keys endpoint
   (target `fraigent_steward_realms:0`, see `src/game/chat.ts`). **Reply in-game** with

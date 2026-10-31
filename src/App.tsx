@@ -8,6 +8,7 @@ import { INITIAL_QUALITY, saveQuality, type Quality } from './scene/quality';
 import { Chat } from './ui/Chat';
 import { Crafting } from './ui/Crafting';
 import { Dialog } from './ui/Dialog';
+import { FpsMeter } from './ui/FpsMeter';
 import { TouchControls } from './ui/TouchControls';
 import { HUD } from './ui/HUD';
 import { Menu } from './ui/Menu';
@@ -34,6 +35,7 @@ export default function App() {
       <Chat />
       <Crafting />
       <Dialog />
+      <FpsMeter />
       <Menu quality={quality} setQuality={setQuality} />
     </div>
   );

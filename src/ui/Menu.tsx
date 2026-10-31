@@ -20,6 +20,7 @@ const CONTROLS: [string, string][] = [
   ['T / Enter', 'Chat with Claude'],
   ['C', 'Crafting'],
   ['Click villager', 'Talk / tasks'],
+  ['F3', 'FPS counter'],
   ['Esc', 'Pause'],
 ];
 

@@ -159,10 +159,15 @@ function Villager({ id }: { id: string }) {
   const mark = useRef<THREE.Mesh>(null);
   const markMat = useMemo(() => new THREE.MeshBasicMaterial({ color: MARK_COLORS.offer, toneMapped: false }), []);
   const ud = { kind: 'npc', id };
+  const root = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const b = body.current;
+    // Distance cull (villagers are ~30 parts each); haze hides the cut-off.
+    const far = (spot.x - player.pos.x) ** 2 + (spot.z - player.pos.z) ** 2 > 90 * 90;
+    if (root.current) root.current.visible = !far;
+    if (far) return;
     if (b) {
       // Turn to face the player when they come close; breathe gently.
       const dx = player.pos.x - spot.x;
@@ -185,7 +190,7 @@ function Villager({ id }: { id: string }) {
   });
 
   return (
-    <group position={[spot.x, spot.y - 0.05, spot.z]}>
+    <group ref={root} position={[spot.x, spot.y - 0.05, spot.z]}>
       <group ref={body}>
         <Humanoid look={npc.look} ud={ud} />
       </group>

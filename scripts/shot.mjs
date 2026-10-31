@@ -59,5 +59,10 @@ if (extra === 'lineup') {
 }
 await page.waitForTimeout(1500);
 await page.screenshot({ path: out });
+const info = await page.evaluate(() => {
+  const r = window.__realms?.gl?.info?.render;
+  return r ? `draw calls ${r.calls}, triangles ${(r.triangles / 1e6).toFixed(2)}M` : 'renderer stats unavailable';
+});
+console.log(info);
 console.log(errors.slice(0, 15).join('\n') || 'no console errors');
 await browser.close();
