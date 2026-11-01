@@ -251,7 +251,7 @@ Supporting pieces:
 - The app runs in **tmux session `fraigent-app-realms`** (not systemd). Vite hot-reloads `src/`.
 - **Restart** after changing `vite.config.ts` or `server/`, or when Vite serves a stale module: `curl -s -X POST http://localhost:3001/api/apps/realms/restart`. Verify afterwards with `tmux has-session -t fraigent-app-realms` and a curl of the served module.
 - **Typecheck after every batch:** `npx tsc --noEmit -p /home/balaa/fraigent-apps/realms`. For the server side, also run `-p …/tsconfig.node.json`.
-- **Commit** each feature with a descriptive message ending in `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The author is set repo-locally to `balaa <buddybalaa@gmail.com>`. There is **no remote** yet; the user would need to create a GitHub repo first.
+- **Commit** each feature with a descriptive message ending in `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The author is set repo-locally to `balaa <buddybalaa@gmail.com>`. The remote is `origin` → `https://github.com/broskiadmin/realms` (private; pushed via the `gh` login `broskiadmin`). Push after committing.
 - **Fresh clone setup:** run `npm install`, then `bash scripts/fetch-assets.sh` (photo textures), then `PLAYWRIGHT_BROWSERS_PATH=.browsers node_modules/.bin/playwright-core install chromium` (screenshots).
 
 ### 5.2 Look before you ship visuals
@@ -318,7 +318,6 @@ If the user says something is "OP", "too hard" or "too easy", these numbers are 
 
 ## 8. Known limitations and backlog
 
-- **The repo has no remote.** Pushing is waiting on the user creating a GitHub repo.
 - **Multiplayer doesn't sync** mobs, night creatures or the trader. There's no authority over inventories, and no anti-cheat.
 - **Steward commands** (`chat-cmd`) run on every client in a multiplayer world.
 - **Realistic animals** are as far as code-sculpting goes. True photo-realism would need scanned or rigged models.
