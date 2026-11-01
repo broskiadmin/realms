@@ -57,7 +57,9 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
   const resetWorld = useGame((s) => s.resetWorld);
   const [confirm, setConfirm] = useState(false);
   const [view, setView] = useState<'main' | 'servers'>('main');
-  const [muted, setMutedState] = useState(isMuted());
+  const [mutedState, setMutedState] = useState(isMuted());
+  // M can toggle mute mid-game; re-read whenever the menu is showing so the label never lies.
+  const muted = locked ? mutedState : isMuted();
   // Stay mounted while playing: PointerLockControls binds its click handler to #play-btn once,
   // so the server list hides the main view with CSS instead of unmounting it.
   return (
