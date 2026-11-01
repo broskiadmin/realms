@@ -3,7 +3,14 @@
  * server world; no param is the local singleplayer world. Kept import-free so
  * the store can read it while it's being created.
  */
+/**
+ * Static hosting (GitHub Pages): no dev server behind the page, so there is
+ * no multiplayer server and no steward chat bridge. Set by `VITE_STATIC=1`.
+ */
+export const STATIC_BUILD = import.meta.env.VITE_STATIC === '1';
+
 export const MP_WORLD: string | null = (() => {
+  if (STATIC_BUILD) return null;
   const w = new URLSearchParams(window.location.search).get('world');
   return w && /^[a-z0-9-]{1,40}$/.test(w) ? w : null;
 })();

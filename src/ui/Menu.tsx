@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { IS_TOUCH } from '../game/fx';
-import { MP_WORLD } from '../game/mode';
+import { MP_WORLD, STATIC_BUILD } from '../game/mode';
 import { net } from '../game/net';
 import type { Quality } from '../scene/quality';
 import { ServerList } from './ServerList';
@@ -88,9 +88,11 @@ export function Menu({ quality, setQuality }: { quality: Quality; setQuality: (q
           ))}
         </div>
         <div className="menu__row">
-          <button className="ghost-btn" onClick={() => setView('servers')}>
-            Multiplayer
-          </button>
+          {!STATIC_BUILD && (
+            <button className="ghost-btn" onClick={() => setView('servers')}>
+              Multiplayer
+            </button>
+          )}
           <button className="ghost-btn" onClick={() => setQuality(NEXT_QUALITY[quality])}>
             Graphics: {QUALITY_LABEL[quality]}
           </button>

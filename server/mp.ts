@@ -112,7 +112,7 @@ export function realmsMultiplayer(dataDir: string): Plugin {
         save(w);
       }
     }
-  }, 1000);
+  }, 1000).unref(); // don't keep `vite build` alive; the dev server's HTTP server holds the process
 
   function handle(w: World, p: PlayerConn, raw: string) {
     let m: Record<string, unknown>;

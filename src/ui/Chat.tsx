@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { pollReplies, sendToSteward } from '../game/chat';
 import { IS_TOUCH } from '../game/fx';
-import { MP_WORLD, playerName } from '../game/mode';
+import { MP_WORLD, playerName, STATIC_BUILD } from '../game/mode';
 import { sendChat } from '../game/net';
 import { summonTraderToPlayer } from '../game/npcs';
 import { useGame } from '../game/store';
@@ -72,7 +72,8 @@ export function Chat() {
       if (!m) return;
       toClaude = `(${playerName()}) ${m[1]}`;
     }
-    if (!(await sendToSteward(toClaude))) g.pushChat('system', "Couldn't reach Claude — is fraigent-command running?");
+    if (STATIC_BUILD) g.pushChat('system', "Chatting with Claude isn't available in the web version.");
+    else if (!(await sendToSteward(toClaude))) g.pushChat('system', "Couldn't reach Claude — is fraigent-command running?");
   };
 
   const now = performance.now();

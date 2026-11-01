@@ -7,6 +7,8 @@
  * `scripts/chat-reply "..."`; the game polls that file.
  */
 
+import { STATIC_BUILD } from './mode';
+
 const STEWARD_SESSION = 'fraigent_steward_realms';
 const STEWARD_WINDOW = 0;
 export const CHAT_PREFIX = '[realms chat]';
@@ -22,7 +24,7 @@ export interface ChatReply {
 
 export async function sendToSteward(text: string): Promise<boolean> {
   const clean = text.replace(/\s+/g, ' ').trim();
-  if (!clean) return false;
+  if (!clean || STATIC_BUILD) return false;
   try {
     const res = await fetch(`/api/tmux/sessions/${STEWARD_SESSION}/send-keys`, {
       method: 'POST',
@@ -37,6 +39,7 @@ export async function sendToSteward(text: string): Promise<boolean> {
 
 /** Returns replies newer than the last one shown, and remembers them as seen. */
 export async function pollReplies(): Promise<ChatReply[]> {
+  if (STATIC_BUILD) return [];
   let seen = Number(localStorage.getItem(SEEN_KEY));
   if (!seen) {
     // First run: don't replay old history.

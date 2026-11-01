@@ -251,7 +251,8 @@ Supporting pieces:
 - The app runs in **tmux session `fraigent-app-realms`** (not systemd). Vite hot-reloads `src/`.
 - **Restart** after changing `vite.config.ts` or `server/`, or when Vite serves a stale module: `curl -s -X POST http://localhost:3001/api/apps/realms/restart`. Verify afterwards with `tmux has-session -t fraigent-app-realms` and a curl of the served module.
 - **Typecheck after every batch:** `npx tsc --noEmit -p /home/balaa/fraigent-apps/realms`. For the server side, also run `-p …/tsconfig.node.json`.
-- **Commit** each feature with a descriptive message ending in `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The author is set repo-locally to `balaa <buddybalaa@gmail.com>`. The remote is `origin` → `https://github.com/broskiadmin/realms` (private; pushed via the `gh` login `broskiadmin`). Push after committing.
+- **Commit** each feature with a descriptive message ending in `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The author is set repo-locally to `balaa <buddybalaa@gmail.com>`. The remote is `origin` → `https://github.com/broskiadmin/realms` (public; pushed via the `gh` login `broskiadmin`). Push after committing.
+- **GitHub Pages:** every push to `main` runs `.github/workflows/pages.yml`, which fetches the Poly Haven assets and builds with `VITE_STATIC=1 PAGES_BASE=/realms/`, publishing to `https://broskiadmin.github.io/realms/`. `STATIC_BUILD` (in `game/mode.ts`) hides Multiplayer and turns off the steward chat bridge, since Pages has no dev server. Anything that needs the dev server must check `STATIC_BUILD`. The multiplayer world-clock timer is `unref()`'d so `vite build` exits.
 - **Fresh clone setup:** run `npm install`, then `bash scripts/fetch-assets.sh` (photo textures), then `PLAYWRIGHT_BROWSERS_PATH=.browsers node_modules/.bin/playwright-core install chromium` (screenshots).
 
 ### 5.2 Look before you ship visuals

@@ -42,7 +42,8 @@ const APP_NAME = process.env.FRAIGENT_APP_NAME;
 const PARENT_PORT = process.env.FRAIGENT_PARENT_PORT
   ? Number(process.env.FRAIGENT_PARENT_PORT)
   : null;
-const BASE = PARENT_PORT && APP_NAME ? `/app/${APP_NAME}/` : '/';
+// PAGES_BASE overrides for static hosting builds (GitHub Pages serves at /<repo>/).
+const BASE = process.env.PAGES_BASE ?? (PARENT_PORT && APP_NAME ? `/app/${APP_NAME}/` : '/');
 
 export default defineConfig({
   base: BASE,
