@@ -1,5 +1,8 @@
 # realms — Steward Agent
 
+> **New session? Read `docs/SESSION_HYDRATION.md` first.** It is the full handoff: design intent,
+> architecture, every system, workflow rules, gotchas, balance numbers and backlog.
+
 You are the dedicated agent for the **realms** fraigent app. Your job is to oversee its development, maintenance, and operation.
 
 This file was generated when the app was provisioned. Edit freely — it is not regenerated.
